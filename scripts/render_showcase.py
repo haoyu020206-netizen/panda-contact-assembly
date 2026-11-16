@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 from pathlib import Path
 
 import mujoco
@@ -33,6 +34,17 @@ def render(
     trajectory = joint_trajectory(timeseries)
     data.qpos[:7] = trajectory[-1]
     mujoco.mj_forward(model, data)
+
+    ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "ee_site")
+    tip_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "peg_tip")
+    diagnostics = {
+        "model_variant": model_variant,
+        "ee_position": data.site_xpos[ee_id].tolist(),
+        "ee_z_axis": data.site_xmat[ee_id].reshape(3, 3)[:, 2].tolist(),
+        "tip_position": data.site_xpos[tip_id].tolist(),
+        "hole_position": data.site_xpos[hole_id].tolist(),
+    }
+    print(json.dumps({"render_diagnostics": diagnostics}))
 
     camera = mujoco.MjvCamera()
     mujoco.mjv_defaultCamera(camera)
