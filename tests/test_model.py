@@ -18,8 +18,9 @@ def test_first_joint_responds_to_direct_motor_torque() -> None:
     reset_to_home(model, data)
     initial_position = float(data.qpos[0])
 
-    data.ctrl[0] = 10.0
     for _ in range(200):
+        data.ctrl[:] = data.qfrc_bias[: model.nu]
+        data.ctrl[0] += 10.0
         mujoco.mj_step(model, data)
 
     displacement = float(data.qpos[0] - initial_position)
