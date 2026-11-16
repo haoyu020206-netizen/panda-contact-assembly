@@ -63,9 +63,9 @@ def _run_loop(
 ) -> None:
     passive_viewer = None
     if viewer:
-        import mujoco.viewer
+        from mujoco import viewer as mujoco_viewer
 
-        passive_viewer = mujoco.viewer.launch_passive(model, data)
+        passive_viewer = mujoco_viewer.launch_passive(model, data)
     next_render = 0.0
     try:
         while data.time < duration:
