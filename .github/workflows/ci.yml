@@ -62,6 +62,9 @@ jobs:
           python -m panda_assembly cartesian --output showcase-results/cartesian
           python -m panda_assembly peg --output showcase-results/peg
           python -m panda_assembly batch --output showcase-results/robustness
+          python -m panda_assembly joint \
+            --config configs/menagerie.toml \
+            --output showcase-results/menagerie-joint
 
       - name: Render verified final scene
         env:

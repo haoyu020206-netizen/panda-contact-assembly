@@ -8,6 +8,11 @@ import tomllib
 
 
 @dataclass(frozen=True)
+class ModelConfig:
+    variant: str
+
+
+@dataclass(frozen=True)
 class SimulationConfig:
     timestep: float
     duration: float
@@ -55,6 +60,7 @@ class OutputConfig:
 
 @dataclass(frozen=True)
 class ProjectConfig:
+    model: ModelConfig
     simulation: SimulationConfig
     joint_controller: JointControllerConfig
     cartesian_controller: CartesianControllerConfig
@@ -70,6 +76,7 @@ def _tuple(values: list[float], size: int, field: str) -> tuple[float, ...]:
 
 
 def _validate(raw: dict[str, Any]) -> ProjectConfig:
+    model = raw.get("model", {"variant": "mvp"})
     simulation = raw["simulation"]
     joint = raw["joint_controller"]
     cartesian = raw["cartesian_controller"]
@@ -77,6 +84,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     output = raw["output"]
 
     config = ProjectConfig(
+        model=ModelConfig(variant=str(model["variant"])),
         simulation=SimulationConfig(
             timestep=float(simulation["timestep"]),
             duration=float(simulation["duration"]),
@@ -130,6 +138,8 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     )
     if config.simulation.timestep <= 0 or config.simulation.duration <= 0:
         raise ValueError("simulation timestep and duration must be positive")
+    if config.model.variant not in {"mvp", "menagerie"}:
+        raise ValueError("model.variant must be either 'mvp' or 'menagerie'")
     times = (
         config.peg_task.approach_time,
         config.peg_task.align_time,

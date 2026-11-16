@@ -1,7 +1,7 @@
 import mujoco
 import numpy as np
 
-from panda_assembly.model import load_model, reset_to_home
+from panda_assembly.model import load_model, model_path, reset_to_home
 
 
 def test_mvp_model_compiles_and_has_expected_interfaces() -> None:
@@ -36,3 +36,18 @@ def test_first_joint_responds_to_direct_motor_torque() -> None:
         f"joint1 displacement={displacement}, contacts={contacts}, "
         f"constraint={np.array2string(data.qfrc_constraint, precision=3)}"
     )
+
+
+def test_menagerie_model_compiles_with_same_control_interface() -> None:
+    model = load_model(variant="menagerie")
+    assert model.nq == 7
+    assert model.nv == 7
+    assert model.nu == 7
+    assert model.body("link1").mass[0] > 4.0
+    assert mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "peg_geom") >= 0
+    assert mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "hole_target") >= 0
+
+
+def test_model_variant_rejects_unknown_name() -> None:
+    with np.testing.assert_raises_regex(ValueError, "Unknown model variant"):
+        model_path("unknown")

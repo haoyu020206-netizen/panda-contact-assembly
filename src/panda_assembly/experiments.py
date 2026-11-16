@@ -140,7 +140,7 @@ def run_joint(
     viewer: bool = False,
     output: Path | None = None,
 ) -> tuple[RunSummary, Path]:
-    model = load_model(timestep=config.simulation.timestep)
+    model = load_model(timestep=config.simulation.timestep, variant=config.model.variant)
     data = mujoco.MjData(model)
     reset_to_home(model, data)
     start = data.qpos[:7].copy()
@@ -184,7 +184,7 @@ def run_cartesian(
     viewer: bool = False,
     output: Path | None = None,
 ) -> tuple[RunSummary, Path]:
-    model = load_model(timestep=config.simulation.timestep)
+    model = load_model(timestep=config.simulation.timestep, variant=config.model.variant)
     data = mujoco.MjData(model)
     reset_to_home(model, data)
     ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "ee_site")
@@ -266,7 +266,7 @@ def run_peg(
     variation: Variation | None = None,
 ) -> tuple[RunSummary, Path]:
     variation = variation or Variation()
-    model = load_model(timestep=config.simulation.timestep)
+    model = load_model(timestep=config.simulation.timestep, variant=config.model.variant)
     data = mujoco.MjData(model)
     reset_to_home(model, data)
     ee_id, peg_id, hole_id = _configure_variation(

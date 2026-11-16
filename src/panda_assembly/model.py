@@ -7,17 +7,34 @@ import mujoco
 
 ARM_JOINTS = tuple(f"joint{i}" for i in range(1, 8))
 ARM_ACTUATORS = tuple(f"motor{i}" for i in range(1, 8))
+MODEL_FILES = {
+    "mvp": "panda_mvp.xml",
+    "menagerie": "panda_menagerie.xml",
+}
 
 
-def default_model_path() -> Path:
-    resource = files("panda_assembly").joinpath("assets/panda_mvp.xml")
+def model_path(variant: str = "mvp") -> Path:
+    try:
+        filename = MODEL_FILES[variant]
+    except KeyError as error:
+        choices = ", ".join(sorted(MODEL_FILES))
+        raise ValueError(f"Unknown model variant {variant!r}; choose one of: {choices}") from error
+    resource = files("panda_assembly").joinpath(f"assets/{filename}")
     with as_file(resource) as path:
         return Path(path)
 
 
-def load_model(path: str | Path | None = None, timestep: float | None = None) -> mujoco.MjModel:
-    model_path = Path(path) if path is not None else default_model_path()
-    model = mujoco.MjModel.from_xml_path(str(model_path))
+def default_model_path() -> Path:
+    return model_path("mvp")
+
+
+def load_model(
+    path: str | Path | None = None,
+    timestep: float | None = None,
+    variant: str = "mvp",
+) -> mujoco.MjModel:
+    selected_path = Path(path) if path is not None else model_path(variant)
+    model = mujoco.MjModel.from_xml_path(str(selected_path))
     if timestep is not None:
         model.opt.timestep = timestep
     validate_model(model)

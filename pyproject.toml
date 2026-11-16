@@ -33,7 +33,14 @@ panda-assembly = "panda_assembly.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-panda_assembly = ["assets/*.xml"]
+panda_assembly = [
+  "assets/*.xml",
+  "assets/menagerie/franka_emika_panda/*.xml",
+  "assets/menagerie/franka_emika_panda/*.md",
+  "assets/menagerie/franka_emika_panda/LICENSE",
+  "assets/menagerie/franka_emika_panda/assets/*.obj",
+  "assets/menagerie/franka_emika_panda/assets/*.stl",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
