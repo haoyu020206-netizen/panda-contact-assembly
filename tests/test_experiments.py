@@ -4,7 +4,6 @@ from pathlib import Path
 from panda_assembly.config import load_config
 from panda_assembly.experiments import run_joint
 
-
 CONFIG = Path(__file__).parents[1] / "configs" / "mvp.toml"
 
 
