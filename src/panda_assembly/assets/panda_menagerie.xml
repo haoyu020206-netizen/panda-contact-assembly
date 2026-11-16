@@ -215,7 +215,8 @@
                     <geom mesh="link7_c" class="panda/collision"/>
                     <body name="attachment" pos="0 0 0.107" quat="0.3826834 0 0 0.9238795">
                       <site name="attachment_site"/>
-                      <body name="tool">
+                      <!-- Normalize the tool frame so +Z points upward and the peg extends along -Z. -->
+                      <body name="tool" quat="0 1 0 0">
                         <inertial pos="0 0 -0.045" mass="0.35"
                           diaginertia="0.0004 0.0004 0.00015"/>
                         <geom type="cylinder" size="0.042 0.025" contype="0" conaffinity="0"

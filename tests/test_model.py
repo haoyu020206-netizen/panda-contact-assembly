@@ -48,6 +48,14 @@ def test_menagerie_model_compiles_with_same_control_interface() -> None:
     assert mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "peg_geom") >= 0
     assert mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "hole_target") >= 0
 
+    data = mujoco.MjData(model)
+    reset_to_home(model, data)
+    ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "ee_site")
+    tip_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "peg_tip")
+    ee_z_axis = data.site_xmat[ee_id].reshape(3, 3)[:, 2]
+    assert ee_z_axis[2] > 0.99
+    assert data.site_xpos[tip_id, 2] < data.site_xpos[ee_id, 2]
+
 
 def test_tool_offset_is_frame_correct_for_both_model_variants() -> None:
     for variant in ("mvp", "menagerie"):
