@@ -1,0 +1,35 @@
+[simulation]
+timestep = 0.002
+duration = 5.0
+render_hz = 60.0
+
+[joint_controller]
+kp = [120.0, 120.0, 100.0, 90.0, 60.0, 45.0, 30.0]
+kd = [18.0, 18.0, 15.0, 13.0, 9.0, 7.0, 5.0]
+move_duration = 3.0
+target_offset = [0.25, -0.20, 0.20, -0.25, 0.15, 0.20, -0.15]
+
+[cartesian_controller]
+position_stiffness = [500.0, 500.0, 350.0]
+position_damping = [44.7, 44.7, 37.4]
+orientation_stiffness = [35.0, 35.0, 20.0]
+orientation_damping = [11.8, 11.8, 8.9]
+nullspace_stiffness = 12.0
+nullspace_damping = 6.9
+damping_ratio = 0.02
+target_offset = [-0.04, 0.06, 0.04]
+
+[peg_task]
+approach_time = 1.0
+align_time = 2.5
+insert_time = 4.5
+settle_time = 5.0
+insertion_depth = 0.035
+clearance = 0.0035
+nominal_friction = 0.8
+
+[output]
+root = "runs"
+save_csv = true
+save_plot = true
+

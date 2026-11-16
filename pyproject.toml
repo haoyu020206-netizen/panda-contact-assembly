@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "panda-contact-assembly"
+version = "0.1.0"
+description = "Reproducible MuJoCo control experiments for a 7-DoF Panda-style arm."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "Panda Contact Assembly contributors" }]
+dependencies = [
+  "mujoco>=3.2.0",
+  "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.8"]
+dev = [
+  "matplotlib>=3.8",
+  "pytest>=8.0",
+  "ruff>=0.8",
+]
+
+[project.scripts]
+panda-assembly = "panda_assembly.cli:main"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+panda_assembly = ["assets/*.xml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+

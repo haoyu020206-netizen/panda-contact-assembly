@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: python -m pip install -e ".[dev]"
+
+      - name: Lint and format check
+        run: |
+          python -m ruff check .
+          python -m ruff format --check .
+
+      - name: Run tests
+        run: python -m pytest
+
+  experiments:
+    needs: quality
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: python -m pip install -e ".[dev]"
+
+      - name: Run reproducible experiments
+        run: |
+          python -m panda_assembly joint --output showcase-results/joint
+          python -m panda_assembly cartesian --output showcase-results/cartesian
+          python -m panda_assembly peg --output showcase-results/peg
+          python -m panda_assembly batch --output showcase-results/robustness
+
+      - name: Upload experiment results
+        uses: actions/upload-artifact@v7
+        with:
+          name: showcase-results
+          path: showcase-results/
+          if-no-files-found: error
+          retention-days: 30
+
