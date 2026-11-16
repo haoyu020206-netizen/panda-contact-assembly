@@ -22,6 +22,8 @@ class RunSummary:
     completion_time_s: float | None
     rms_joint_error_rad: float | None = None
     max_joint_error_rad: float | None = None
+    rms_orientation_error_rad: float | None = None
+    max_orientation_error_rad: float | None = None
     final_xy_error_m: float | None = None
     final_insertion_depth_m: float | None = None
 
@@ -37,6 +39,7 @@ class RunLog:
         contact_force: float,
         qpos: FloatArray,
         joint_error: FloatArray | None = None,
+        orientation_error: FloatArray | None = None,
     ) -> None:
         row: dict[str, float | None] = {
             "time_s": float(time),
@@ -46,6 +49,9 @@ class RunLog:
             "position_error_norm_m": None,
             "joint_error_norm_rad": (
                 None if joint_error is None else float(np.linalg.norm(joint_error))
+            ),
+            "orientation_error_norm_rad": (
+                None if orientation_error is None else float(np.linalg.norm(orientation_error))
             ),
             "contact_force_n": float(contact_force),
         }
@@ -77,6 +83,16 @@ class RunLog:
                 row["joint_error_norm_rad"]
                 for row in self.rows
                 if row["joint_error_norm_rad"] is not None
+            ],
+            dtype=float,
+        )
+
+    def orientation_errors(self) -> FloatArray:
+        return np.asarray(
+            [
+                row["orientation_error_norm_rad"]
+                for row in self.rows
+                if row["orientation_error_norm_rad"] is not None
             ],
             dtype=float,
         )

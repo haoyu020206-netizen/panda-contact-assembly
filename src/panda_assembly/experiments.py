@@ -102,6 +102,7 @@ def _finish_run(
 ) -> tuple[RunSummary, Path]:
     position_errors = log.position_errors()
     joint_errors = log.joint_errors()
+    orientation_errors = log.orientation_errors()
     summary = RunSummary(
         mode=mode,
         success=success,
@@ -115,6 +116,12 @@ def _finish_run(
             float(np.sqrt(np.mean(joint_errors**2))) if joint_errors.size else None
         ),
         max_joint_error_rad=float(np.max(joint_errors)) if joint_errors.size else None,
+        rms_orientation_error_rad=(
+            float(np.sqrt(np.mean(orientation_errors**2))) if orientation_errors.size else None
+        ),
+        max_orientation_error_rad=(
+            float(np.max(orientation_errors)) if orientation_errors.size else None
+        ),
         final_xy_error_m=final_xy_error,
         final_insertion_depth_m=final_depth,
     )
@@ -191,7 +198,13 @@ def run_cartesian(
         desired_position = start_position + blend * (goal - start_position)
         torque, error = controller.torque(model, data, ee_id, desired_position, desired_rotation)
         apply_torque(model, data, torque)
-        log.append(sim_time, error[:3], 0.0, data.qpos)
+        log.append(
+            sim_time,
+            error[:3],
+            0.0,
+            data.qpos,
+            orientation_error=error[3:],
+        )
 
     _run_loop(
         model,
@@ -290,7 +303,13 @@ def run_peg(
         torque, error = controller.torque(model, data, ee_id, target, desired_rotation)
         apply_torque(model, data, torque)
         force = total_contact_force(model, data, peg_id)
-        log.append(sim_time, error[:3], force, data.qpos)
+        log.append(
+            sim_time,
+            error[:3],
+            force,
+            data.qpos,
+            orientation_error=error[3:],
+        )
 
         tip_position, _ = site_pose(model, data, tip_id)
         xy_error = float(np.linalg.norm(tip_position[:2] - hole_position[:2]))

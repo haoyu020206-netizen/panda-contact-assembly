@@ -10,10 +10,10 @@ move_duration = 3.0
 target_offset = [0.25, -0.20, 0.20, -0.25, 0.15, 0.20, -0.15]
 
 [cartesian_controller]
-position_stiffness = [500.0, 500.0, 350.0]
-position_damping = [44.7, 44.7, 37.4]
-orientation_stiffness = [35.0, 35.0, 20.0]
-orientation_damping = [11.8, 11.8, 8.9]
+position_stiffness = [400.0, 400.0, 140.0]
+position_damping = [40.0, 40.0, 23.7]
+orientation_stiffness = [180.0, 180.0, 80.0]
+orientation_damping = [26.8, 26.8, 17.9]
 nullspace_stiffness = 12.0
 nullspace_damping = 6.9
 damping_ratio = 0.02

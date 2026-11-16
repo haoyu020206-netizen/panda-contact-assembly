@@ -79,6 +79,7 @@ runs/<experiment>/
 - `success`：peg tip 的横向误差不超过配置的 clearance，且插入深度达到阈值；
 - `rms_position_error_m`：控制周期内末端位置误差的均方根；
 - `rms_joint_error_rad`：关节实验中 7 轴误差向量范数的均方根；
+- `rms_orientation_error_rad`：笛卡尔/插孔实验中的末端姿态误差均方根；
 - `max_contact_force_n`：peg 所有接触点法向/切向合力范数之和的最大值；
 - `completion_time_s`：首次同时满足横向误差和插入深度阈值的仿真时间；
 - `final_xy_error_m`、`final_insertion_depth_m`：最终装配几何误差。
