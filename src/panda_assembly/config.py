@@ -41,6 +41,7 @@ class PegTaskConfig:
     insert_time: float
     settle_time: float
     insertion_depth: float
+    target_depth: float
     clearance: float
     nominal_friction: float
 
@@ -117,6 +118,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             insert_time=float(peg["insert_time"]),
             settle_time=float(peg["settle_time"]),
             insertion_depth=float(peg["insertion_depth"]),
+            target_depth=float(peg["target_depth"]),
             clearance=float(peg["clearance"]),
             nominal_friction=float(peg["nominal_friction"]),
         ),
@@ -136,6 +138,8 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     )
     if tuple(sorted(times)) != times:
         raise ValueError("peg task phase times must be monotonically increasing")
+    if config.peg_task.target_depth < config.peg_task.insertion_depth:
+        raise ValueError("peg_task.target_depth must be at least insertion_depth")
     return config
 
 

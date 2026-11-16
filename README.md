@@ -76,7 +76,7 @@ runs/<experiment>/
 
 ## 指标定义
 
-- `success`：peg tip 的横向误差不超过配置的 clearance，且插入深度达到阈值；
+- `success`：peg tip 的横向误差不超过配置的 clearance，且插入深度达到 `insertion_depth`；控制器会继续向 `target_depth` 运动，从而在孔底形成可测量的接触力；
 - `rms_position_error_m`：控制周期内末端位置误差的均方根；
 - `rms_joint_error_rad`：关节实验中 7 轴误差向量范数的均方根；
 - `rms_orientation_error_rad`：笛卡尔/插孔实验中的末端姿态误差均方根；

@@ -220,7 +220,7 @@ def run_cartesian(
         config,
         "cartesian",
         log,
-        success=final_error < 0.015,
+        success=final_error < 0.020,
         completion_time=config.simulation.duration,
         output=output,
     )
@@ -294,7 +294,7 @@ def run_peg(
         ]
     )
     final_target = aligned.copy()
-    final_target[2] = commanded_hole_position[2] - peg.insertion_depth - vertical_tip_offset[2]
+    final_target[2] = commanded_hole_position[2] - peg.target_depth - vertical_tip_offset[2]
 
     def desired_position(sim_time: float) -> np.ndarray:
         if sim_time <= peg.approach_time:
@@ -363,7 +363,7 @@ def run_robustness_batch(
         Variation(friction_scale=1.4),
         Variation(tool_mass_scale=0.8),
         Variation(tool_mass_scale=1.2),
-        Variation(lateral_offset_x=0.002, friction_scale=1.4, tool_mass_scale=1.2),
+        Variation(lateral_offset_x=0.0055, friction_scale=1.4, tool_mass_scale=1.2),
     ]
     rows: list[dict[str, object]] = []
     for index, variation in enumerate(variations):

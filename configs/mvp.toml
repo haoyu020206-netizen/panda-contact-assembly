@@ -24,7 +24,8 @@ approach_time = 1.0
 align_time = 4.0
 insert_time = 8.0
 settle_time = 10.0
-insertion_depth = 0.035
+insertion_depth = 0.050
+target_depth = 0.060
 clearance = 0.005
 nominal_friction = 0.8
 
