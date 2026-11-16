@@ -22,6 +22,14 @@ nullspace_damping = 6.9
 damping_ratio = 0.02
 target_offset = [-0.04, 0.06, 0.04]
 
+[cartesian_position_controller]
+joint_kp = [400.0, 400.0, 350.0, 300.0, 120.0, 80.0, 50.0]
+joint_kd = [40.0, 40.0, 35.0, 30.0, 16.0, 12.0, 10.0]
+translation_gain = 8.0
+rotation_gain = 6.0
+damping_ratio = 0.03
+max_joint_velocity = 1.5
+
 [peg_task]
 approach_time = 1.0
 align_time = 4.0

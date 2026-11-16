@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
@@ -13,6 +14,7 @@ import numpy as np
 from panda_assembly.config import ProjectConfig
 from panda_assembly.controllers import (
     CartesianImpedanceController,
+    CartesianPositionController,
     JointPDController,
     apply_torque,
     site_pose,
@@ -65,6 +67,33 @@ def _cartesian_controller(
     )
 
 
+def _cartesian_position_controller(
+    config: ProjectConfig, initial_posture: np.ndarray
+) -> CartesianPositionController:
+    values = config.cartesian_position_controller
+    return CartesianPositionController(
+        joint_kp=np.asarray(values.joint_kp),
+        joint_kd=np.asarray(values.joint_kd),
+        translation_gain=values.translation_gain,
+        rotation_gain=values.rotation_gain,
+        damped_inverse_ratio=values.damping_ratio,
+        max_joint_velocity=values.max_joint_velocity,
+        desired_joint_position=initial_posture.copy(),
+    )
+
+
+def _task_controller(
+    config: ProjectConfig,
+    initial_posture: np.ndarray,
+    controller_kind: str,
+) -> CartesianImpedanceController | CartesianPositionController:
+    if controller_kind == "impedance":
+        return _cartesian_controller(config, initial_posture)
+    if controller_kind == "position":
+        return _cartesian_position_controller(config, initial_posture)
+    raise ValueError("controller_kind must be either 'impedance' or 'position'")
+
+
 def _run_loop(
     model: mujoco.MjModel,
     data: mujoco.MjData,
@@ -111,6 +140,7 @@ def _finish_run(
     output: Path | None,
     final_xy_error: float | None = None,
     final_depth: float | None = None,
+    controller: str | None = None,
 ) -> tuple[RunSummary, Path]:
     position_errors = log.position_errors()
     joint_errors = log.joint_errors()
@@ -136,6 +166,7 @@ def _finish_run(
         ),
         final_xy_error_m=final_xy_error,
         final_insertion_depth_m=final_depth,
+        controller=controller,
     )
     directory = _output_directory(config, mode, output)
     directory.mkdir(parents=True, exist_ok=True)
@@ -188,6 +219,7 @@ def run_joint(
         success=final_error < 0.03,
         completion_time=config.simulation.duration,
         output=output,
+        controller="joint_pd",
     )
 
 
@@ -195,6 +227,7 @@ def run_cartesian(
     config: ProjectConfig,
     viewer: bool = False,
     output: Path | None = None,
+    controller_kind: str = "impedance",
 ) -> tuple[RunSummary, Path]:
     model = load_model(timestep=config.simulation.timestep, variant=config.model.variant)
     data = mujoco.MjData(model)
@@ -202,7 +235,7 @@ def run_cartesian(
     ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "ee_site")
     start_position, desired_rotation = site_pose(model, data, ee_id)
     goal = start_position + np.asarray(config.cartesian_controller.target_offset)
-    controller = _cartesian_controller(config, data.qpos[:7])
+    controller = _task_controller(config, data.qpos[:7], controller_kind)
     log = RunLog()
 
     def step(sim_time: float) -> None:
@@ -235,6 +268,7 @@ def run_cartesian(
         success=final_error < 0.020,
         completion_time=config.simulation.duration,
         output=output,
+        controller=controller_kind,
     )
 
 
@@ -276,6 +310,7 @@ def run_peg(
     viewer: bool = False,
     output: Path | None = None,
     variation: Variation | None = None,
+    controller_kind: str = "impedance",
 ) -> tuple[RunSummary, Path]:
     variation = variation or Variation()
     model = load_model(timestep=config.simulation.timestep, variant=config.model.variant)
@@ -293,7 +328,7 @@ def run_peg(
     vertical_rotation = vertical_tool_frame(start_rotation)
     tip_offset_local = _site_offset_in_frame(model, data, ee_id, tip_id)
     vertical_tip_offset = vertical_rotation @ tip_offset_local
-    controller = _cartesian_controller(config, data.qpos[:7])
+    controller = _task_controller(config, data.qpos[:7], controller_kind)
     peg = config.peg_task
     log = RunLog()
     completion_time: float | None = None
@@ -358,6 +393,7 @@ def run_peg(
         output=output,
         final_xy_error=final_xy_error,
         final_depth=final_depth,
+        controller=controller_kind,
     )
 
 
@@ -400,8 +436,74 @@ def run_robustness_batch(
             np.mean([float(row["max_contact_force_n"]) for row in rows])
         ),
     }
-    import json
-
     with (directory / "aggregate.json").open("w", encoding="utf-8") as handle:
         json.dump(aggregate, handle, indent=2)
+    return directory
+
+
+def _save_controller_comparison_plot(directory: Path) -> bool:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    figure, axes = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
+    colors = {"impedance": "#2166ac", "position": "#b2182b"}
+    for controller_kind, color in colors.items():
+        with (directory / controller_kind / "timeseries.csv").open(
+            newline="", encoding="utf-8"
+        ) as handle:
+            rows = list(csv.DictReader(handle))
+        times = [float(row["time_s"]) for row in rows]
+        errors = [1000.0 * float(row["position_error_norm_m"]) for row in rows]
+        forces = [float(row["contact_force_n"]) for row in rows]
+        axes[0].plot(times, errors, color=color, label=controller_kind)
+        axes[1].plot(times, forces, color=color, label=controller_kind)
+    axes[0].set_ylabel("Position error [mm]")
+    axes[1].set_ylabel("Peg contact force [N]")
+    axes[1].set_xlabel("Time [s]")
+    for axis in axes:
+        axis.grid(alpha=0.25)
+        axis.legend()
+    figure.tight_layout()
+    figure.savefig(directory / "comparison.png", dpi=160)
+    plt.close(figure)
+    return True
+
+
+def run_controller_comparison(config: ProjectConfig, output: Path | None = None) -> Path:
+    """Run the same nominal insertion with position and impedance control."""
+    directory = _output_directory(config, "comparison", output)
+    directory.mkdir(parents=True, exist_ok=True)
+    summaries: dict[str, RunSummary] = {}
+    for controller_kind in ("impedance", "position"):
+        summary, _ = run_peg(
+            config,
+            viewer=False,
+            output=directory / controller_kind,
+            controller_kind=controller_kind,
+        )
+        summaries[controller_kind] = summary
+
+    rows = [asdict(summaries[name]) for name in ("impedance", "position")]
+    with (directory / "comparison.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    impedance_force = summaries["impedance"].max_contact_force_n
+    position_force = summaries["position"].max_contact_force_n
+    comparison = {
+        "model_variant": config.model.variant,
+        "task": "nominal_peg_insertion",
+        "controllers": {name: asdict(summary) for name, summary in summaries.items()},
+        "position_minus_impedance_peak_force_n": position_force - impedance_force,
+        "position_over_impedance_peak_force_ratio": (
+            position_force / impedance_force if impedance_force > 0.0 else None
+        ),
+    }
+    with (directory / "comparison.json").open("w", encoding="utf-8") as handle:
+        json.dump(comparison, handle, indent=2)
+    if config.output.save_plot and config.output.save_csv:
+        _save_controller_comparison_plot(directory)
     return directory

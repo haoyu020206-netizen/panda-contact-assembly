@@ -40,6 +40,16 @@ class CartesianControllerConfig:
 
 
 @dataclass(frozen=True)
+class CartesianPositionControllerConfig:
+    joint_kp: tuple[float, ...]
+    joint_kd: tuple[float, ...]
+    translation_gain: float
+    rotation_gain: float
+    damping_ratio: float
+    max_joint_velocity: float
+
+
+@dataclass(frozen=True)
 class PegTaskConfig:
     approach_time: float
     align_time: float
@@ -64,6 +74,7 @@ class ProjectConfig:
     simulation: SimulationConfig
     joint_controller: JointControllerConfig
     cartesian_controller: CartesianControllerConfig
+    cartesian_position_controller: CartesianPositionControllerConfig
     peg_task: PegTaskConfig
     output: OutputConfig
 
@@ -80,6 +91,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     simulation = raw["simulation"]
     joint = raw["joint_controller"]
     cartesian = raw["cartesian_controller"]
+    cartesian_position = raw["cartesian_position_controller"]
     peg = raw["peg_task"]
     output = raw["output"]
 
@@ -120,6 +132,22 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
                 cartesian["target_offset"], 3, "cartesian_controller.target_offset"
             ),
         ),
+        cartesian_position_controller=CartesianPositionControllerConfig(
+            joint_kp=_tuple(
+                cartesian_position["joint_kp"],
+                7,
+                "cartesian_position_controller.joint_kp",
+            ),
+            joint_kd=_tuple(
+                cartesian_position["joint_kd"],
+                7,
+                "cartesian_position_controller.joint_kd",
+            ),
+            translation_gain=float(cartesian_position["translation_gain"]),
+            rotation_gain=float(cartesian_position["rotation_gain"]),
+            damping_ratio=float(cartesian_position["damping_ratio"]),
+            max_joint_velocity=float(cartesian_position["max_joint_velocity"]),
+        ),
         peg_task=PegTaskConfig(
             approach_time=float(peg["approach_time"]),
             align_time=float(peg["align_time"]),
@@ -140,6 +168,8 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         raise ValueError("simulation timestep and duration must be positive")
     if config.model.variant not in {"mvp", "menagerie"}:
         raise ValueError("model.variant must be either 'mvp' or 'menagerie'")
+    if config.cartesian_position_controller.max_joint_velocity <= 0:
+        raise ValueError("cartesian_position_controller.max_joint_velocity must be positive")
     times = (
         config.peg_task.approach_time,
         config.peg_task.align_time,

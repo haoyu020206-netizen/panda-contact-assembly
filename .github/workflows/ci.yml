@@ -71,6 +71,9 @@ jobs:
           python -m panda_assembly peg \
             --config configs/menagerie.toml \
             --output showcase-results/menagerie-peg
+          python -m panda_assembly compare \
+            --config configs/menagerie.toml \
+            --output showcase-results/controller-comparison
 
       - name: Render verified final scene
         env:

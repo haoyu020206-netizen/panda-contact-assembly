@@ -26,6 +26,7 @@ class RunSummary:
     max_orientation_error_rad: float | None = None
     final_xy_error_m: float | None = None
     final_insertion_depth_m: float | None = None
+    controller: str | None = None
 
 
 class RunLog:
