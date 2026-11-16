@@ -20,8 +20,13 @@ def joint_trajectory(path: Path) -> np.ndarray:
     return np.asarray([[float(row[f"q{i}_rad"]) for i in range(1, 8)] for row in rows])
 
 
-def render(timeseries: Path, output: Path, animation_output: Path | None = None) -> None:
-    model = load_model()
+def render(
+    timeseries: Path,
+    output: Path,
+    animation_output: Path | None = None,
+    model_variant: str = "mvp",
+) -> None:
+    model = load_model(variant=model_variant)
     data = mujoco.MjData(model)
     reset_to_home(model, data)
     _, _, hole_id = _configure_variation(model, data, Variation(), nominal_friction=0.8)
@@ -76,8 +81,9 @@ def main() -> None:
     parser.add_argument("--timeseries", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--animation-output", type=Path)
+    parser.add_argument("--model-variant", choices=("mvp", "menagerie"), default="mvp")
     args = parser.parse_args()
-    render(args.timeseries, args.output, args.animation_output)
+    render(args.timeseries, args.output, args.animation_output, args.model_variant)
 
 
 if __name__ == "__main__":
