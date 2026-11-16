@@ -69,7 +69,8 @@ jobs:
         run: |
           python scripts/render_showcase.py \
             --timeseries showcase-results/peg/timeseries.csv \
-            --output showcase-results/scene.png
+            --output showcase-results/scene.png \
+            --animation-output showcase-results/insertion.gif
 
       - name: Upload experiment results
         uses: actions/upload-artifact@v7
