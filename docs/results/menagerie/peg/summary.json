@@ -1,0 +1,14 @@
+{
+  "mode": "peg",
+  "success": true,
+  "rms_position_error_m": 0.023676297043467763,
+  "max_position_error_m": 0.05099881591961305,
+  "max_contact_force_n": 56.755930124736494,
+  "completion_time_s": 7.851999999999357,
+  "rms_joint_error_rad": null,
+  "max_joint_error_rad": null,
+  "rms_orientation_error_rad": 0.0012680768139655622,
+  "max_orientation_error_rad": 0.002870634525266886,
+  "final_xy_error_m": 0.0002194361991941867,
+  "final_insertion_depth_m": 0.05799526935930338
+}
