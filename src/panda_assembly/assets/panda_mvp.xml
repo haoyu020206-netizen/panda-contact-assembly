@@ -81,7 +81,7 @@
       </body>
     </body>
 
-    <body name="socket_fixture" mocap="true" pos="1.0 0 0.30">
+    <body name="socket_fixture" mocap="true" pos="2.0 2.0 0.30">
       <geom name="socket_base" type="box" pos="0 0 0.006" size="0.07 0.07 0.006" material="socket"/>
       <geom name="socket_x_pos" type="box" pos="0.0325 0 0.035" size="0.015 0.05 0.035" material="socket"/>
       <geom name="socket_x_neg" type="box" pos="-0.0325 0 0.035" size="0.015 0.05 0.035" material="socket"/>

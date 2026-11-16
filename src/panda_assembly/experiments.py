@@ -225,6 +225,14 @@ def _configure_variation(
     peg_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "peg_geom")
     tool_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "tool")
 
+    model.body_mass[tool_body] *= variation.tool_mass_scale
+    for name in ("socket_x_pos", "socket_x_neg", "socket_y_pos", "socket_y_neg"):
+        geom_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
+        model.geom_friction[geom_id, 0] = nominal_friction * variation.friction_scale
+    mujoco.mj_setConst(model, data)
+    # mj_setConst recomputes model-derived quantities and resets data to qpos0.
+    # Restore the named home posture before positioning the movable fixture.
+    reset_to_home(model, data)
     position, _ = site_pose(model, data, ee_id)
     data.mocap_pos[mocap_id] = np.array(
         [
@@ -233,11 +241,6 @@ def _configure_variation(
             0.30,
         ]
     )
-    model.body_mass[tool_body] *= variation.tool_mass_scale
-    for name in ("socket_x_pos", "socket_x_neg", "socket_y_pos", "socket_y_neg"):
-        geom_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
-        model.geom_friction[geom_id, 0] = nominal_friction * variation.friction_scale
-    mujoco.mj_setConst(model, data)
     mujoco.mj_forward(model, data)
     hole_site = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "hole_target")
     return ee_id, peg_id, hole_site
