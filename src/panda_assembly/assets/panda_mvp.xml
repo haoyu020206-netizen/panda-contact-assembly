@@ -16,7 +16,8 @@
       <geom contype="0" conaffinity="0" group="2" type="capsule" rgba="0.92 0.92 0.95 1"/>
     </default>
     <default class="arm_collision">
-      <geom group="3" type="capsule" rgba="0.15 0.15 0.18 0.28"/>
+      <!-- Collision bits keep adjacent capsules from self-locking while retaining table contact. -->
+      <geom group="3" type="capsule" contype="2" conaffinity="0" rgba="0.15 0.15 0.18 0.28"/>
     </default>
   </default>
 
@@ -32,11 +33,11 @@
 
   <worldbody>
     <light pos="0 -1 2.4" dir="0 0 -1" directional="true"/>
-    <geom name="floor" type="plane" size="2.5 2.5 0.1" material="ground_mat"/>
-    <geom name="table" type="box" pos="0.65 0 0.15" size="0.75 0.70 0.15" rgba="0.32 0.25 0.19 1"/>
+    <geom name="floor" type="plane" size="2.5 2.5 0.1" conaffinity="6" material="ground_mat"/>
+    <geom name="table" type="box" pos="0.65 0 0.15" size="0.75 0.70 0.15" conaffinity="6" rgba="0.32 0.25 0.19 1"/>
 
     <body name="base" pos="-0.05 0 0.31">
-      <geom type="cylinder" size="0.105 0.04" material="panda_black"/>
+      <geom type="cylinder" size="0.105 0.04" contype="0" conaffinity="0" material="panda_black"/>
       <body name="link1" pos="0 0 0.04">
         <joint name="joint1" type="hinge" axis="0 0 1" range="-2.8973 2.8973"/>
         <geom class="arm_visual" fromto="0 0 0 0 0 0.24" size="0.065" material="panda_white"/>
@@ -67,9 +68,9 @@
                     <geom class="arm_collision" fromto="0 0 0 0.09 0 0" size="0.033"/>
                     <body name="tool" pos="0.09 0 0">
                       <inertial pos="0 0 -0.045" mass="0.35" diaginertia="0.0004 0.0004 0.00015"/>
-                      <geom type="cylinder" size="0.042 0.025" material="panda_black"/>
+                      <geom type="cylinder" size="0.042 0.025" contype="2" conaffinity="0" material="panda_black"/>
                       <site name="ee_site" pos="0 0 0" size="0.008" rgba="0 1 0 0.8"/>
-                      <geom name="peg_geom" type="cylinder" pos="0 0 -0.065" size="0.014 0.065" material="peg"/>
+                      <geom name="peg_geom" type="cylinder" pos="0 0 -0.065" size="0.014 0.065" contype="4" conaffinity="0" material="peg"/>
                       <site name="peg_tip" pos="0 0 -0.13" size="0.006" rgba="1 0.1 0.1 0.9"/>
                     </body>
                   </body>
@@ -82,11 +83,11 @@
     </body>
 
     <body name="socket_fixture" mocap="true" pos="2.0 2.0 0.30">
-      <geom name="socket_base" type="box" pos="0 0 0.006" size="0.07 0.07 0.006" material="socket"/>
-      <geom name="socket_x_pos" type="box" pos="0.0325 0 0.035" size="0.015 0.05 0.035" material="socket"/>
-      <geom name="socket_x_neg" type="box" pos="-0.0325 0 0.035" size="0.015 0.05 0.035" material="socket"/>
-      <geom name="socket_y_pos" type="box" pos="0 0.0325 0.035" size="0.0175 0.015 0.035" material="socket"/>
-      <geom name="socket_y_neg" type="box" pos="0 -0.0325 0.035" size="0.0175 0.015 0.035" material="socket"/>
+      <geom name="socket_base" type="box" pos="0 0 0.006" size="0.07 0.07 0.006" contype="1" conaffinity="4" material="socket"/>
+      <geom name="socket_x_pos" type="box" pos="0.0325 0 0.035" size="0.015 0.05 0.035" contype="1" conaffinity="4" material="socket"/>
+      <geom name="socket_x_neg" type="box" pos="-0.0325 0 0.035" size="0.015 0.05 0.035" contype="1" conaffinity="4" material="socket"/>
+      <geom name="socket_y_pos" type="box" pos="0 0.0325 0.035" size="0.0175 0.015 0.035" contype="1" conaffinity="4" material="socket"/>
+      <geom name="socket_y_neg" type="box" pos="0 -0.0325 0.035" size="0.0175 0.015 0.035" contype="1" conaffinity="4" material="socket"/>
       <site name="hole_target" pos="0 0 0.07" size="0.004" rgba="0.1 1 1 0.85"/>
     </body>
   </worldbody>
