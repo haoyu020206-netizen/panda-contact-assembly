@@ -13,9 +13,11 @@ GitHub Actions 会在标准 Linux runner 上执行 lint、单元测试、关节/
 
 ## Verified results
 
+![Verified peg-in-hole insertion trajectory](docs/results/insertion.gif)
+
 ![Verified final peg-in-hole state](docs/results/scene.png)
 
-以下结果由 [GitHub Actions run 43957991194](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/43957991194) 在 Python 3.12 / Ubuntu runner 上重新生成，不是手工填写的示例数据。
+以下结果由 [GitHub Actions run 43959488539](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/43959488539) 在 Python 3.12 / Ubuntu runner 上重新生成，不是手工填写的示例数据。
 
 | Experiment | Result | Tracking error | Contact / task metric |
 | --- | ---: | ---: | ---: |
