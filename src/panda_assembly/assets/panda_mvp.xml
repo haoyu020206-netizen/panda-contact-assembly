@@ -84,10 +84,10 @@
 
     <body name="socket_fixture" mocap="true" pos="2.0 2.0 0.30">
       <geom name="socket_base" type="box" pos="0 0 0.006" size="0.07 0.07 0.006" contype="1" conaffinity="4" material="socket"/>
-      <geom name="socket_x_pos" type="box" pos="0.0325 0 0.035" size="0.015 0.05 0.035" contype="1" conaffinity="4" material="socket"/>
-      <geom name="socket_x_neg" type="box" pos="-0.0325 0 0.035" size="0.015 0.05 0.035" contype="1" conaffinity="4" material="socket"/>
-      <geom name="socket_y_pos" type="box" pos="0 0.0325 0.035" size="0.0175 0.015 0.035" contype="1" conaffinity="4" material="socket"/>
-      <geom name="socket_y_neg" type="box" pos="0 -0.0325 0.035" size="0.0175 0.015 0.035" contype="1" conaffinity="4" material="socket"/>
+      <geom name="socket_x_pos" type="box" pos="0.034 0 0.035" size="0.015 0.05 0.035" contype="1" conaffinity="4" material="socket"/>
+      <geom name="socket_x_neg" type="box" pos="-0.034 0 0.035" size="0.015 0.05 0.035" contype="1" conaffinity="4" material="socket"/>
+      <geom name="socket_y_pos" type="box" pos="0 0.034 0.035" size="0.019 0.015 0.035" contype="1" conaffinity="4" material="socket"/>
+      <geom name="socket_y_neg" type="box" pos="0 -0.034 0.035" size="0.019 0.015 0.035" contype="1" conaffinity="4" material="socket"/>
       <site name="hole_target" pos="0 0 0.07" size="0.004" rgba="0.1 1 1 0.85"/>
     </body>
   </worldbody>
