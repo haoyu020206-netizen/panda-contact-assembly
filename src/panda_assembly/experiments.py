@@ -17,7 +17,7 @@ from panda_assembly.controllers import (
     apply_torque,
     site_pose,
 )
-from panda_assembly.math_utils import smoothstep
+from panda_assembly.math_utils import interpolate_rotation, smoothstep, vertical_tool_frame
 from panda_assembly.metrics import (
     RunLog,
     RunSummary,
@@ -272,21 +272,29 @@ def run_peg(
     ee_id, peg_id, hole_id = _configure_variation(
         model, data, variation, config.peg_task.nominal_friction
     )
-    start_position, desired_rotation = site_pose(model, data, ee_id)
+    start_position, start_rotation = site_pose(model, data, ee_id)
     hole_position, _ = site_pose(model, data, hole_id)
     commanded_hole_position = hole_position.copy()
     commanded_hole_position[0] -= variation.lateral_offset_x
     commanded_hole_position[1] -= variation.lateral_offset_y
     tip_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "peg_tip")
-    initial_tip, _ = site_pose(model, data, tip_id)
+    vertical_rotation = vertical_tool_frame(start_rotation)
+    tip_offset_local = model.site_pos[tip_id] - model.site_pos[ee_id]
+    vertical_tip_offset = vertical_rotation @ tip_offset_local
     controller = _cartesian_controller(config, data.qpos[:7])
     peg = config.peg_task
     log = RunLog()
     completion_time: float | None = None
 
-    aligned = np.array([commanded_hole_position[0], commanded_hole_position[1], start_position[2]])
+    aligned = np.array(
+        [
+            commanded_hole_position[0] - vertical_tip_offset[0],
+            commanded_hole_position[1] - vertical_tip_offset[1],
+            start_position[2],
+        ]
+    )
     final_target = aligned.copy()
-    final_target[2] -= max(0.0, initial_tip[2] - hole_position[2]) + peg.insertion_depth
+    final_target[2] = commanded_hole_position[2] - peg.insertion_depth - vertical_tip_offset[2]
 
     def desired_position(sim_time: float) -> np.ndarray:
         if sim_time <= peg.approach_time:
@@ -297,10 +305,17 @@ def run_peg(
         progress = (sim_time - peg.align_time) / (peg.insert_time - peg.align_time)
         return aligned + smoothstep(progress) * (final_target - aligned)
 
+    def desired_rotation(sim_time: float) -> np.ndarray:
+        if sim_time <= peg.approach_time:
+            return start_rotation
+        progress = (sim_time - peg.approach_time) / (peg.align_time - peg.approach_time)
+        return interpolate_rotation(start_rotation, vertical_rotation, progress)
+
     def step(sim_time: float) -> None:
         nonlocal completion_time
         target = desired_position(sim_time)
-        torque, error = controller.torque(model, data, ee_id, target, desired_rotation)
+        target_rotation = desired_rotation(sim_time)
+        torque, error = controller.torque(model, data, ee_id, target, target_rotation)
         apply_torque(model, data, torque)
         force = total_contact_force(model, data, peg_id)
         log.append(
