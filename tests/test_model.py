@@ -23,7 +23,15 @@ def test_first_joint_responds_to_direct_motor_torque() -> None:
         mujoco.mj_step(model, data)
 
     displacement = float(data.qpos[0] - initial_position)
+    contacts = [
+        (
+            mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, data.contact[i].geom1),
+            mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, data.contact[i].geom2),
+            float(data.contact[i].dist),
+        )
+        for i in range(data.ncon)
+    ]
     assert abs(displacement) > 0.01, (
-        f"joint1 displacement={displacement}, contacts={data.ncon}, "
+        f"joint1 displacement={displacement}, contacts={contacts}, "
         f"constraint={np.array2string(data.qfrc_constraint, precision=3)}"
     )
