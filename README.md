@@ -5,11 +5,28 @@
 [![MuJoCo](https://img.shields.io/badge/MuJoCo-4.x-00A6D6.svg)](https://mujoco.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-一个面向控制/机器人岗位作品集的可复现实验项目：在 MuJoCo 中实现 7-DoF Panda 风格机械臂的关节轨迹控制、笛卡尔阻抗控制与 peg-in-hole 接触装配，并量化扰动下的表现。
+A reproducible MuJoCo control benchmark for a 7-DoF Panda-style arm: joint trajectory tracking, Cartesian impedance control, contact-aware peg-in-hole insertion, and automated robustness evaluation.
 
-当前是考试前 MVP。范围有意限制在 Python + MuJoCo，不包含 ROS2、视觉、强化学习或真机部署。
+这是有意收敛范围的 Python + MuJoCo MVP；ROS2、视觉、强化学习和真机部署留作后续扩展。
 
 GitHub Actions 会在标准 Linux runner 上执行 lint、单元测试、关节/笛卡尔/插孔实验和完整鲁棒性批次，并保存可下载的 CSV、JSON 与 PNG 结果，确保仓库不是“只能看、不能跑”的演示代码。
+
+## Verified results
+
+![Verified final peg-in-hole state](docs/results/scene.png)
+
+以下结果由 [GitHub Actions run 43957991194](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/43957991194) 在 Python 3.12 / Ubuntu runner 上重新生成，不是手工填写的示例数据。
+
+| Experiment | Result | Tracking error | Contact / task metric |
+| --- | ---: | ---: | ---: |
+| Joint trajectory | Pass | RMS **0.0118 rad**, max **0.0245 rad** | 5.0 s run |
+| Cartesian impedance | Pass | RMS position **13.1 mm**, RMS orientation **3.14 mrad** | max position error 16.9 mm |
+| Nominal peg insertion | Pass | final XY error **0.117 mm** | **45.6 N** peak, **7.852 s**, 58.0 mm depth |
+| Robustness batch | **6 / 8 (75%)** | pose, friction, and tool-mass variations | mean peak force 98.6 N |
+
+The asymmetric result is intentional evidence rather than a hidden failure: a +2 mm X fixture error failed while a -2 mm Y error passed, exposing direction-dependent sensitivity in the current kinematics/controller. The 5.5 mm combined disturbance also failed. See the committed [batch data](docs/results/robustness/batch_summary.csv) and [result provenance](docs/results/README.md).
+
+![Nominal insertion tracking error and contact force](docs/results/peg/metrics.png)
 
 ## 已实现
 
@@ -37,14 +54,7 @@ pytest
 
 如果本机只有更新的 Python，可先尝试安装；若 MuJoCo 尚未提供对应 wheel，再安装 Python 3.12。
 
-如果出现“应用程序控制策略已阻止此文件”的 NumPy DLL 错误，这通常来自受管理的 Python 执行环境，而不是项目路径。请改用正常安装的 Python 3.12，或在允许原生扩展的 WSL2/开发容器中运行；无需移动 D 盘上的源码和实验输出。
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
-pytest
-```
+如果出现“应用程序控制策略已阻止此文件”的 NumPy DLL 错误，这来自 Windows Smart App Control/企业签名策略，而不是项目路径。请在允许第三方原生扩展的 Python、WSL2 或开发容器中运行；GitHub Actions 提供独立的 Linux 验收路径。
 
 ## 运行
 
