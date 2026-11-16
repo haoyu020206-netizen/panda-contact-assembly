@@ -37,6 +37,18 @@ class Variation:
     tool_mass_scale: float = 1.0
 
 
+def _site_offset_in_frame(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    origin_site_id: int,
+    target_site_id: int,
+) -> np.ndarray:
+    """Express the origin-to-target site offset in the origin site's frame."""
+    origin_position, origin_rotation = site_pose(model, data, origin_site_id)
+    target_position, _ = site_pose(model, data, target_site_id)
+    return origin_rotation.T @ (target_position - origin_position)
+
+
 def _cartesian_controller(
     config: ProjectConfig, rest_posture: np.ndarray
 ) -> CartesianImpedanceController:
@@ -279,7 +291,7 @@ def run_peg(
     commanded_hole_position[1] -= variation.lateral_offset_y
     tip_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "peg_tip")
     vertical_rotation = vertical_tool_frame(start_rotation)
-    tip_offset_local = model.site_pos[tip_id] - model.site_pos[ee_id]
+    tip_offset_local = _site_offset_in_frame(model, data, ee_id, tip_id)
     vertical_tip_offset = vertical_rotation @ tip_offset_local
     controller = _cartesian_controller(config, data.qpos[:7])
     peg = config.peg_task

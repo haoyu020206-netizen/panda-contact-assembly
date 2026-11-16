@@ -1,6 +1,7 @@
 import mujoco
 import numpy as np
 
+from panda_assembly.experiments import _site_offset_in_frame
 from panda_assembly.model import load_model, model_path, reset_to_home
 
 
@@ -46,6 +47,17 @@ def test_menagerie_model_compiles_with_same_control_interface() -> None:
     assert model.body("link1").mass[0] > 4.0
     assert mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "peg_geom") >= 0
     assert mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "hole_target") >= 0
+
+
+def test_tool_offset_is_frame_correct_for_both_model_variants() -> None:
+    for variant in ("mvp", "menagerie"):
+        model = load_model(variant=variant)
+        data = mujoco.MjData(model)
+        reset_to_home(model, data)
+        ee_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "ee_site")
+        tip_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "peg_tip")
+        offset = _site_offset_in_frame(model, data, ee_id, tip_id)
+        np.testing.assert_allclose(offset, [0.0, 0.0, -0.13], atol=1e-9)
 
 
 def test_model_variant_rejects_unknown_name() -> None:
