@@ -38,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       MPLBACKEND: Agg
+      MUJOCO_GL: egl
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -57,6 +58,12 @@ jobs:
           python -m panda_assembly cartesian --output showcase-results/cartesian
           python -m panda_assembly peg --output showcase-results/peg
           python -m panda_assembly batch --output showcase-results/robustness
+
+      - name: Render verified final scene
+        run: |
+          python scripts/render_showcase.py \
+            --timeseries showcase-results/peg/timeseries.csv \
+            --output showcase-results/scene.png
 
       - name: Upload experiment results
         uses: actions/upload-artifact@v7
