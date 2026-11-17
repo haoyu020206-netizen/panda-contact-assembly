@@ -79,6 +79,14 @@ class BoundaryScanConfig:
 
 
 @dataclass(frozen=True)
+class BoundaryRefinementConfig:
+    min_offset_m: float
+    max_offset_m: float
+    step_m: float
+    safe_force_limit_n: float
+
+
+@dataclass(frozen=True)
 class OutputConfig:
     root: str
     save_csv: bool
@@ -95,6 +103,7 @@ class ProjectConfig:
     peg_task: PegTaskConfig
     monte_carlo: MonteCarloConfig
     boundary_scan: BoundaryScanConfig
+    boundary_refinement: BoundaryRefinementConfig
     output: OutputConfig
 
 
@@ -114,6 +123,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     peg = raw["peg_task"]
     monte_carlo = raw["monte_carlo"]
     boundary_scan = raw["boundary_scan"]
+    boundary_refinement = raw["boundary_refinement"]
     output = raw["output"]
 
     config = ProjectConfig(
@@ -192,6 +202,12 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             max_offset_m=float(boundary_scan["max_offset_m"]),
             step_m=float(boundary_scan["step_m"]),
         ),
+        boundary_refinement=BoundaryRefinementConfig(
+            min_offset_m=float(boundary_refinement["min_offset_m"]),
+            max_offset_m=float(boundary_refinement["max_offset_m"]),
+            step_m=float(boundary_refinement["step_m"]),
+            safe_force_limit_n=float(boundary_refinement["safe_force_limit_n"]),
+        ),
         output=OutputConfig(
             root=str(output["root"]),
             save_csv=bool(output["save_csv"]),
@@ -217,6 +233,16 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     boundary_steps = config.boundary_scan.max_offset_m / config.boundary_scan.step_m
     if not abs(boundary_steps - round(boundary_steps)) < 1e-9:
         raise ValueError("boundary_scan.max_offset_m must be divisible by step_m")
+    refinement = config.boundary_refinement
+    if refinement.min_offset_m <= 0 or refinement.step_m <= 0:
+        raise ValueError("boundary_refinement offsets must be positive")
+    if refinement.max_offset_m < refinement.min_offset_m:
+        raise ValueError("boundary_refinement offset bounds are reversed")
+    refinement_steps = (refinement.max_offset_m - refinement.min_offset_m) / refinement.step_m
+    if not abs(refinement_steps - round(refinement_steps)) < 1e-9:
+        raise ValueError("boundary_refinement range must be divisible by step_m")
+    if refinement.safe_force_limit_n <= 0:
+        raise ValueError("boundary_refinement.safe_force_limit_n must be positive")
     times = (
         config.peg_task.approach_time,
         config.peg_task.align_time,

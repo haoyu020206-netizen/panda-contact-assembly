@@ -8,6 +8,7 @@ from pathlib import Path
 from panda_assembly.config import load_config
 from panda_assembly.experiments import (
     run_cartesian,
+    run_controller_boundary_refinement,
     run_controller_boundary_scan,
     run_controller_comparison,
     run_controller_robustness_comparison,
@@ -34,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
             "compare-batch",
             "monte-carlo",
             "boundary-scan",
+            "boundary-refine",
         ),
         help="Experiment to run.",
     )
@@ -85,6 +87,12 @@ def main() -> None:
             raise SystemExit("--viewer is not available for boundary scans")
         output = run_controller_boundary_scan(config, args.output)
         print(json.dumps({"mode": "boundary-scan", "output": str(output)}, indent=2))
+        return
+    if args.mode == "boundary-refine":
+        if args.viewer:
+            raise SystemExit("--viewer is not available for boundary refinement")
+        output = run_controller_boundary_refinement(config, args.output)
+        print(json.dumps({"mode": "boundary-refine", "output": str(output)}, indent=2))
         return
 
     if args.mode == "joint":

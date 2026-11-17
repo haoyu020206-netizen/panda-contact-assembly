@@ -53,6 +53,12 @@ tool_mass_scale_max = 1.2
 max_offset_m = 0.012
 step_m = 0.002
 
+[boundary_refinement]
+min_offset_m = 0.004
+max_offset_m = 0.008
+step_m = 0.0005
+safe_force_limit_n = 200.0
+
 [output]
 root = "runs"
 save_csv = true

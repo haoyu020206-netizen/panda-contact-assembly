@@ -18,3 +18,5 @@ def test_loads_mvp_config() -> None:
     assert config.monte_carlo.trials == 20
     assert config.boundary_scan.max_offset_m == 0.012
     assert config.boundary_scan.step_m == 0.002
+    assert config.boundary_refinement.step_m == 0.0005
+    assert config.boundary_refinement.safe_force_limit_n == 200.0

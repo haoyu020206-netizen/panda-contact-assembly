@@ -5,6 +5,7 @@ from panda_assembly.config import load_config
 from panda_assembly.experiments import (
     BOUNDARY_DIRECTIONS,
     ROBUSTNESS_SCENARIOS,
+    _boundary_refinement_points,
     _boundary_scan_points,
     _monte_carlo_variations,
     run_joint,
@@ -73,6 +74,29 @@ def test_boundary_scan_points_are_unique_and_radial() -> None:
     assert {point.direction for point in points[1:]} == {
         direction for direction, _, _, _, _ in BOUNDARY_DIRECTIONS
     }
+    assert all(
+        abs(
+            (point.variation.lateral_offset_x**2 + point.variation.lateral_offset_y**2) ** 0.5
+            - point.offset_m
+        )
+        < 1e-12
+        for point in points
+    )
+
+
+def test_boundary_refinement_points_cover_transition_grid() -> None:
+    config = load_config(CONFIG)
+    points = _boundary_refinement_points(config)
+    refinement = config.boundary_refinement
+    fine_steps = round((refinement.max_offset_m - refinement.min_offset_m) / refinement.step_m)
+    expected_radii = 1 + fine_steps + 1
+
+    assert len(points) == 1 + expected_radii * len(BOUNDARY_DIRECTIONS)
+    assert points[0].direction == "origin"
+    positive_offsets = sorted({point.offset_m for point in points[1:]})
+    assert positive_offsets[0] == config.boundary_scan.step_m
+    assert positive_offsets[1] == refinement.min_offset_m
+    assert positive_offsets[-1] == refinement.max_offset_m
     assert all(
         abs(
             (point.variation.lateral_offset_x**2 + point.variation.lateral_offset_y**2) ** 0.5

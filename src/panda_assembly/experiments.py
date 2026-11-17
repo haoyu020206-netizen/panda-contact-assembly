@@ -906,15 +906,17 @@ def _boundary_scan_points(config: ProjectConfig) -> tuple[BoundaryScanPoint, ...
 
 
 def _direction_boundary_summary(
-    controller_rows: list[dict[str, object]], direction: str
+    controller_rows: list[dict[str, object]],
+    direction: str,
+    success_key: str = "success",
 ) -> dict[str, object]:
     origin = next(row for row in controller_rows if row["direction"] == "origin")
     rows = [origin] + [row for row in controller_rows if row["direction"] == direction]
     rows.sort(key=lambda row: float(row["offset_m"]))
     first_failure_index = next(
-        (index for index, row in enumerate(rows) if not bool(row["success"])), None
+        (index for index, row in enumerate(rows) if not bool(row[success_key])), None
     )
-    successful_offsets = [float(row["offset_m"]) for row in rows if bool(row["success"])]
+    successful_offsets = [float(row["offset_m"]) for row in rows if bool(row[success_key])]
     if first_failure_index is None:
         contiguous_limit = float(rows[-1]["offset_m"])
         first_failure_offset = None
@@ -924,9 +926,9 @@ def _direction_boundary_summary(
             float(rows[first_failure_index - 1]["offset_m"]) if first_failure_index > 0 else None
         )
         first_failure_offset = float(rows[first_failure_index]["offset_m"])
-        non_monotonic = any(bool(row["success"]) for row in rows[first_failure_index + 1 :])
+        non_monotonic = any(bool(row[success_key]) for row in rows[first_failure_index + 1 :])
     return {
-        "origin_success": bool(origin["success"]),
+        "origin_success": bool(origin[success_key]),
         "contiguous_success_limit_m": contiguous_limit,
         "first_failure_offset_m": first_failure_offset,
         "boundary_bracket_m": (
@@ -1132,4 +1134,293 @@ def run_controller_boundary_scan(config: ProjectConfig, output: Path | None = No
         json.dump(result, handle, indent=2)
     if config.output.save_plot:
         _save_boundary_scan_plot(aggregates, config, directory / "boundary_scan_summary.png")
+    return directory
+
+
+def _boundary_refinement_points(config: ProjectConfig) -> tuple[BoundaryScanPoint, ...]:
+    """Return coarse anchors plus the fine transition-region radial grid."""
+    refinement = config.boundary_refinement
+    fine_steps = int(round((refinement.max_offset_m - refinement.min_offset_m) / refinement.step_m))
+    fine_offsets = [
+        refinement.min_offset_m + index * refinement.step_m for index in range(fine_steps + 1)
+    ]
+    anchor_offsets = [
+        offset
+        for offset in (config.boundary_scan.step_m,)
+        if 0.0 < offset < refinement.min_offset_m
+    ]
+    offsets = sorted({round(value, 12) for value in anchor_offsets + fine_offsets})
+    points = [
+        BoundaryScanPoint(
+            scenario="origin",
+            direction="origin",
+            direction_label="origin",
+            angle_deg=None,
+            offset_m=0.0,
+            variation=Variation(),
+        )
+    ]
+    for offset in offsets:
+        offset_um = int(round(1_000_000.0 * offset))
+        for direction, label, angle_deg, x_unit, y_unit in BOUNDARY_DIRECTIONS:
+            points.append(
+                BoundaryScanPoint(
+                    scenario=f"{direction}_{offset_um:05d}um",
+                    direction=direction,
+                    direction_label=label,
+                    angle_deg=angle_deg,
+                    offset_m=offset,
+                    variation=Variation(
+                        lateral_offset_x=offset * x_unit,
+                        lateral_offset_y=offset * y_unit,
+                    ),
+                )
+            )
+    return tuple(points)
+
+
+def _boundary_refinement_controller_summary(
+    controller_rows: list[dict[str, object]], config: ProjectConfig
+) -> dict[str, object]:
+    directions = {
+        direction: {
+            "label": label,
+            "angle_deg": angle_deg,
+            "geometric": _direction_boundary_summary(
+                controller_rows,
+                direction,
+                success_key="success",
+            ),
+            "safe": _direction_boundary_summary(
+                controller_rows,
+                direction,
+                success_key="safe_success",
+            ),
+        }
+        for direction, label, angle_deg, _, _ in BOUNDARY_DIRECTIONS
+    }
+    offsets = sorted({float(row["offset_m"]) for row in controller_rows})
+    offset_summaries: list[dict[str, object]] = []
+    for offset in offsets:
+        offset_rows = [
+            row for row in controller_rows if abs(float(row["offset_m"]) - offset) < 1e-12
+        ]
+        geometric_successes = sum(bool(row["success"]) for row in offset_rows)
+        safe_successes = sum(bool(row["safe_success"]) for row in offset_rows)
+        offset_summaries.append(
+            {
+                "offset_m": offset,
+                "evaluations": len(offset_rows),
+                "geometric_successes": geometric_successes,
+                "geometric_success_fraction": geometric_successes / len(offset_rows),
+                "safe_successes": safe_successes,
+                "safe_success_fraction": safe_successes / len(offset_rows),
+                "worst_peak_contact_force_n": max(
+                    float(row["max_contact_force_n"]) for row in offset_rows
+                ),
+            }
+        )
+    geometric_limits = [
+        float(values["geometric"]["contiguous_success_limit_m"] or 0.0)
+        for values in directions.values()
+    ]
+    safe_limits = [
+        float(values["safe"]["contiguous_success_limit_m"] or 0.0) for values in directions.values()
+    ]
+    return {
+        "evaluations": len(controller_rows),
+        "geometric_successes": sum(bool(row["success"]) for row in controller_rows),
+        "safe_successes": sum(bool(row["safe_success"]) for row in controller_rows),
+        "safe_force_limit_n": config.boundary_refinement.safe_force_limit_n,
+        "isotropic_geometric_success_radius_m": min(geometric_limits),
+        "isotropic_safe_success_radius_m": min(safe_limits),
+        "best_direction_geometric_success_limit_m": max(geometric_limits),
+        "best_direction_safe_success_limit_m": max(safe_limits),
+        "geometric_non_monotonic_directions": [
+            direction
+            for direction, values in directions.items()
+            if bool(values["geometric"]["non_monotonic_success"])
+        ],
+        "safe_non_monotonic_directions": [
+            direction
+            for direction, values in directions.items()
+            if bool(values["safe"]["non_monotonic_success"])
+        ],
+        "directions": directions,
+        "offset_summary": offset_summaries,
+    }
+
+
+def _save_boundary_refinement_plot(
+    aggregates: dict[str, dict[str, object]], config: ProjectConfig, path: Path
+) -> bool:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    colors = {"impedance": "#2166ac", "position": "#b2182b"}
+    styles = {"geometric": "-", "safe": "--"}
+    direction_angles = np.radians([values[2] for values in BOUNDARY_DIRECTIONS])
+    closed_angles = np.append(direction_angles, direction_angles[0])
+    figure = plt.figure(figsize=(16, 5.5))
+    polar_axis = figure.add_subplot(1, 3, 1, projection="polar")
+    success_axis = figure.add_subplot(1, 3, 2)
+    force_axis = figure.add_subplot(1, 3, 3)
+
+    for controller_kind in ("impedance", "position"):
+        aggregate = aggregates[controller_kind]
+        direction_values = aggregate["directions"]
+        for metric in ("geometric", "safe"):
+            limits = [
+                1000.0
+                * float(direction_values[direction][metric]["contiguous_success_limit_m"] or 0.0)
+                for direction, _, _, _, _ in BOUNDARY_DIRECTIONS
+            ]
+            closed_limits = np.append(limits, limits[0])
+            polar_axis.plot(
+                closed_angles,
+                closed_limits,
+                marker="o",
+                color=colors[controller_kind],
+                linestyle=styles[metric],
+                label=f"{controller_kind} {metric}",
+            )
+
+        offset_summary = aggregate["offset_summary"]
+        offsets_mm = [1000.0 * float(row["offset_m"]) for row in offset_summary]
+        geometric_fractions = [float(row["geometric_success_fraction"]) for row in offset_summary]
+        safe_fractions = [float(row["safe_success_fraction"]) for row in offset_summary]
+        worst_forces = [float(row["worst_peak_contact_force_n"]) for row in offset_summary]
+        success_axis.plot(
+            offsets_mm,
+            geometric_fractions,
+            marker="o",
+            color=colors[controller_kind],
+            label=f"{controller_kind} geometric",
+        )
+        success_axis.plot(
+            offsets_mm,
+            safe_fractions,
+            marker="x",
+            color=colors[controller_kind],
+            linestyle="--",
+            label=f"{controller_kind} safe",
+        )
+        force_axis.plot(
+            offsets_mm,
+            worst_forces,
+            marker="o",
+            color=colors[controller_kind],
+            label=controller_kind,
+        )
+
+    polar_axis.set_theta_zero_location("E")
+    polar_axis.set_theta_direction(1)
+    polar_axis.set_xticks(
+        direction_angles,
+        labels=[values[1] for values in BOUNDARY_DIRECTIONS],
+    )
+    polar_axis.set_ylim(0.0, 1000.0 * config.boundary_refinement.max_offset_m)
+    polar_axis.set_title("Refined success boundary [mm]")
+    polar_axis.grid(alpha=0.3)
+    polar_axis.legend(loc="upper right", bbox_to_anchor=(1.35, 1.18), fontsize=8)
+
+    success_axis.set_xlabel("Fixture offset [mm]")
+    success_axis.set_ylabel("Successful directions / tested directions")
+    success_axis.set_ylim(-0.04, 1.04)
+    success_axis.grid(alpha=0.25)
+    success_axis.legend(fontsize=8)
+
+    force_axis.axhline(
+        config.boundary_refinement.safe_force_limit_n,
+        color="#333333",
+        linestyle="--",
+        label=f"safe-force limit ({config.boundary_refinement.safe_force_limit_n:g} N)",
+    )
+    force_axis.set_xlabel("Fixture offset [mm]")
+    force_axis.set_ylabel("Worst peak contact force [N]")
+    force_axis.set_yscale("log")
+    force_axis.grid(alpha=0.25, which="both")
+    force_axis.legend(fontsize=8)
+    figure.tight_layout()
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+    return True
+
+
+def run_controller_boundary_refinement(config: ProjectConfig, output: Path | None = None) -> Path:
+    """Refine the transition boundary and separate geometric from safe success."""
+    directory = _output_directory(config, "boundary_refinement", output)
+    directory.mkdir(parents=True, exist_ok=True)
+    trial_config = replace(
+        config,
+        output=replace(config.output, save_csv=False, save_plot=False),
+    )
+    force_limit = config.boundary_refinement.safe_force_limit_n
+    rows: list[dict[str, object]] = []
+    for point in _boundary_refinement_points(config):
+        for controller_kind in ("impedance", "position"):
+            summary, _ = run_peg(
+                trial_config,
+                viewer=False,
+                output=directory / point.scenario / controller_kind,
+                variation=point.variation,
+                controller_kind=controller_kind,
+            )
+            rows.append(
+                {
+                    "scenario": point.scenario,
+                    "direction": point.direction,
+                    "direction_label": point.direction_label,
+                    "angle_deg": point.angle_deg,
+                    "offset_m": point.offset_m,
+                    **asdict(point.variation),
+                    **asdict(summary),
+                    "safe_force_limit_n": force_limit,
+                    "safe_success": summary.success and summary.max_contact_force_n <= force_limit,
+                }
+            )
+
+    with (directory / "boundary_refinement_trials.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    controller_rows = {
+        controller_kind: [row for row in rows if row["controller"] == controller_kind]
+        for controller_kind in ("impedance", "position")
+    }
+    aggregates = {
+        controller_kind: _boundary_refinement_controller_summary(values, config)
+        for controller_kind, values in controller_rows.items()
+    }
+    result = {
+        "model_variant": config.model.variant,
+        "refinement": asdict(config.boundary_refinement),
+        "coarse_anchor_offset_m": config.boundary_scan.step_m,
+        "directions": [
+            {"name": name, "label": label, "angle_deg": angle_deg}
+            for name, label, angle_deg, _, _ in BOUNDARY_DIRECTIONS
+        ],
+        "geometric_success_definition": (
+            "configured insertion depth and lateral-clearance criteria are met"
+        ),
+        "safe_success_definition": (
+            f"geometric success with peak simulated contact force no greater than {force_limit:g} N"
+        ),
+        "safe_force_limit_is_exploratory": True,
+        "aggregates": aggregates,
+        "trials": rows,
+    }
+    with (directory / "boundary_refinement_summary.json").open("w", encoding="utf-8") as handle:
+        json.dump(result, handle, indent=2)
+    if config.output.save_plot:
+        _save_boundary_refinement_plot(
+            aggregates,
+            config,
+            directory / "boundary_refinement_summary.png",
+        )
     return directory
