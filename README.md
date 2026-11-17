@@ -102,6 +102,25 @@ A deterministic radial scan holds friction and tool mass at their nominal values
 
 Both controllers therefore have a **4 mm contiguous success radius across all eight tested directions** at this scan resolution. At 6 mm, each succeeds in only one of eight directions, but in opposite directions. Position control also re-entered geometric success at 8 mm in two diagonal directions after failing at 6 mm; those non-monotonic cases required 872–886 N and are not evidence of a reliable larger boundary. Worst scan forces were **1.46 kN for impedance** and **3.07 kN for position**, showing that even impedance control can generate severe simulated loads when a diagonal contact jams. These are geometric simulation boundaries, not hardware tolerances or safety certifications. Evidence comes from [GitHub Actions run 44175719284](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44175719284).
 
+## Refined geometric and safe boundary
+
+![Refined geometric and safe insertion boundary](docs/results/boundary-refinement/boundary_refinement_summary.png)
+
+The 4–8 mm transition region was then rescanned at 0.5 mm resolution. An exploratory `safe_success` metric requires geometric success and a simulated peak contact force no greater than 200 N. This threshold separates low-force insertion from contact-driven high-force insertion; it is configurable and is **not** a hardware safety limit.
+
+| Direction | Impedance geometric / safe | Position geometric / safe |
+| --- | ---: | ---: |
+| +X | 5.5 / 5.5 mm | 6.0 / **5.5 mm** |
+| +X+Y | 5.0 / 5.0 mm | 5.0 / 5.0 mm |
+| +Y | 5.5 / 5.5 mm | 5.5 / 5.5 mm |
+| -X+Y | 4.5 / 4.5 mm | 4.5 / 4.5 mm |
+| -X | **6.0 / 6.0 mm** | 5.5 / 5.5 mm |
+| -X-Y | 4.5 / 4.5 mm | 5.0 / 5.0 mm |
+| -Y | 5.5 / 5.5 mm | 5.5 / 5.5 mm |
+| +X-Y | 5.0 / 5.0 mm | 5.0 / 5.0 mm |
+
+Both controllers have a **4.5 mm contiguous radius across all eight tested directions**. Impedance control's 36 geometric successes all remained below 200 N. Position control recorded 41 geometric successes, but five were rejected as unsafe; at 6 mm its only geometric success reached **3.11 kN**, giving 0/8 safe successes versus 1/8 for impedance. At 7.5 and 8 mm, position control again produced two geometric successes but zero safe successes. This is the clearest result of the project so far: geometric completion alone can reward damaging contact. Evidence comes from [GitHub Actions run 44180056892](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44180056892).
+
 ## 已实现
 
 - 自带无网格依赖的 7-DoF Panda 风格 MJCF，可立即验证控制代码；
@@ -112,6 +131,7 @@ Both controllers therefore have a **4 mm contiguous success radius across all ei
 - 两种控制器在同一组位姿、摩擦和质量扰动下的配对批量实验；
 - 固定随机种子的 20 组配对 Monte Carlo 实验、Wilson 成功率区间和接触力均值区间；
 - 八方向、0–12 mm 的失效边界扫描，以及非单调成功检测；
+- 4–8 mm、0.5 mm 分辨率的边界细化，以及 200 N 探索性安全成功判据；
 - 方孔插入任务、接触力读取和成功判据；
 - 孔位、摩擦和工具质量扰动的批量实验；
 - CSV 时序数据、JSON 摘要和可选 PNG 曲线；
@@ -178,6 +198,12 @@ python -m panda_assembly monte-carlo --config configs\menagerie.toml --output ru
 python -m panda_assembly boundary-scan --config configs\menagerie.toml --output runs\boundary_scan
 ```
 
+细化边界并区分几何成功与安全成功：
+
+```powershell
+python -m panda_assembly boundary-refine --config configs\menagerie.toml --output runs\boundary_refinement
+```
+
 也可以单独运行位置控制：
 
 ```powershell
@@ -199,7 +225,7 @@ runs/<experiment>/
 └── metrics.png        # 误差与接触力曲线（安装 matplotlib 时）
 ```
 
-批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。Monte Carlo 模式生成 `monte_carlo_trials.csv`、`monte_carlo_summary.json` 与带置信区间的 `monte_carlo_summary.png`；边界扫描生成对应的 `boundary_scan_trials.csv`、JSON 摘要和三联图。
+批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。Monte Carlo 模式生成 `monte_carlo_trials.csv`、`monte_carlo_summary.json` 与带置信区间的 `monte_carlo_summary.png`；粗扫描和细化扫描分别生成逐工况 CSV、JSON 摘要和三联图。
 
 ## 指标定义
 
@@ -241,9 +267,9 @@ tests/                            # 配置、数学、轨迹与模型测试
 
 ## 后续升级顺序
 
-1. 在 4–8 mm 转换区间用 0.5 mm 步长细化边界；
-2. 增加接触力阈值，区分“几何成功”和“安全成功”；
-3. 按卡住、偏孔和冲击过大建立失败类型与参数敏感性统计；
+1. 按卡住、偏孔和冲击过大建立失败类型统计；
+2. 加入力阈值触发的停止/回撤策略，降低卡死冲击；
+3. 做参数敏感性分析，区分位姿、摩擦和质量的贡献；
 4. 考试后再接 ROS2/`ros2_control`、MoveIt2 与 residual RL。
 
 ## 简历表述
