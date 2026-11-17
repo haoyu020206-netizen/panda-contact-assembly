@@ -39,6 +39,21 @@ class Variation:
     tool_mass_scale: float = 1.0
 
 
+ROBUSTNESS_SCENARIOS = (
+    ("nominal", Variation()),
+    ("pose_x_plus_2mm", Variation(lateral_offset_x=0.002)),
+    ("pose_y_minus_2mm", Variation(lateral_offset_y=-0.002)),
+    ("friction_low", Variation(friction_scale=0.6)),
+    ("friction_high", Variation(friction_scale=1.4)),
+    ("tool_light", Variation(tool_mass_scale=0.8)),
+    ("tool_heavy", Variation(tool_mass_scale=1.2)),
+    (
+        "combined",
+        Variation(lateral_offset_x=0.0055, friction_scale=1.4, tool_mass_scale=1.2),
+    ),
+)
+
+
 def _site_offset_in_frame(
     model: mujoco.MjModel,
     data: mujoco.MjData,
@@ -403,25 +418,15 @@ def run_robustness_batch(
 ) -> Path:
     directory = _output_directory(config, "batch", output)
     directory.mkdir(parents=True, exist_ok=True)
-    variations = [
-        Variation(),
-        Variation(lateral_offset_x=0.002),
-        Variation(lateral_offset_y=-0.002),
-        Variation(friction_scale=0.6),
-        Variation(friction_scale=1.4),
-        Variation(tool_mass_scale=0.8),
-        Variation(tool_mass_scale=1.2),
-        Variation(lateral_offset_x=0.0055, friction_scale=1.4, tool_mass_scale=1.2),
-    ]
     rows: list[dict[str, object]] = []
-    for index, variation in enumerate(variations):
+    for index, (scenario, variation) in enumerate(ROBUSTNESS_SCENARIOS):
         summary, _ = run_peg(
             config,
             viewer=False,
             output=directory / f"trial_{index:02d}",
             variation=variation,
         )
-        rows.append({**asdict(variation), **asdict(summary)})
+        rows.append({"scenario": scenario, **asdict(variation), **asdict(summary)})
 
     with (directory / "batch_summary.csv").open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
@@ -506,4 +511,123 @@ def run_controller_comparison(config: ProjectConfig, output: Path | None = None)
         json.dump(comparison, handle, indent=2)
     if config.output.save_plot and config.output.save_csv:
         _save_controller_comparison_plot(directory)
+    return directory
+
+
+def _aggregate_controller_rows(rows: list[dict[str, object]]) -> dict[str, object]:
+    successes = sum(bool(row["success"]) for row in rows)
+    forces = [float(row["max_contact_force_n"]) for row in rows]
+    completion_times = [
+        float(row["completion_time_s"]) for row in rows if row["completion_time_s"] is not None
+    ]
+    return {
+        "trials": len(rows),
+        "successes": successes,
+        "success_rate": successes / len(rows),
+        "mean_peak_contact_force_n": float(np.mean(forces)),
+        "max_peak_contact_force_n": float(np.max(forces)),
+        "mean_completion_time_s_successes": (
+            float(np.mean(completion_times)) if completion_times else None
+        ),
+    }
+
+
+def _save_robustness_comparison_plot(rows: list[dict[str, object]], path: Path) -> bool:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    scenarios = [name for name, _ in ROBUSTNESS_SCENARIOS]
+    indices = np.arange(len(scenarios))
+    width = 0.38
+    colors = {"impedance": "#2166ac", "position": "#b2182b"}
+    figure, axes = plt.subplots(2, 1, sharex=True, figsize=(12, 7))
+    for offset, controller_kind in ((-width / 2, "impedance"), (width / 2, "position")):
+        controller_rows = [row for row in rows if row["controller"] == controller_kind]
+        success = [int(bool(row["success"])) for row in controller_rows]
+        force = [float(row["max_contact_force_n"]) for row in controller_rows]
+        axes[0].bar(
+            indices + offset,
+            success,
+            width,
+            color=colors[controller_kind],
+            label=controller_kind,
+        )
+        axes[1].bar(
+            indices + offset,
+            force,
+            width,
+            color=colors[controller_kind],
+            label=controller_kind,
+        )
+    axes[0].set_ylabel("Insertion success")
+    axes[0].set_yticks([0, 1], labels=["fail", "pass"])
+    axes[0].set_ylim(0.0, 1.15)
+    axes[1].set_ylabel("Peak contact force [N]")
+    axes[1].set_xticks(indices, labels=scenarios, rotation=25, ha="right")
+    for axis in axes:
+        axis.grid(axis="y", alpha=0.25)
+        axis.legend()
+    figure.tight_layout()
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+    return True
+
+
+def run_controller_robustness_comparison(config: ProjectConfig, output: Path | None = None) -> Path:
+    """Compare both Cartesian controllers across the fixed disturbance matrix."""
+    directory = _output_directory(config, "controller_robustness", output)
+    directory.mkdir(parents=True, exist_ok=True)
+    rows: list[dict[str, object]] = []
+    for scenario, variation in ROBUSTNESS_SCENARIOS:
+        for controller_kind in ("impedance", "position"):
+            summary, _ = run_peg(
+                config,
+                viewer=False,
+                output=directory / scenario / controller_kind,
+                variation=variation,
+                controller_kind=controller_kind,
+            )
+            rows.append(
+                {
+                    "scenario": scenario,
+                    **asdict(variation),
+                    **asdict(summary),
+                }
+            )
+
+    with (directory / "robustness_comparison.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    controller_rows = {
+        controller_kind: [row for row in rows if row["controller"] == controller_kind]
+        for controller_kind in ("impedance", "position")
+    }
+    aggregates = {
+        controller_kind: _aggregate_controller_rows(values)
+        for controller_kind, values in controller_rows.items()
+    }
+    comparison = {
+        "model_variant": config.model.variant,
+        "scenarios": len(ROBUSTNESS_SCENARIOS),
+        "aggregates": aggregates,
+        "position_minus_impedance_success_rate": (
+            float(aggregates["position"]["success_rate"])
+            - float(aggregates["impedance"]["success_rate"])
+        ),
+        "position_over_impedance_mean_peak_force_ratio": (
+            float(aggregates["position"]["mean_peak_contact_force_n"])
+            / float(aggregates["impedance"]["mean_peak_contact_force_n"])
+        ),
+        "trials": rows,
+    }
+    with (directory / "robustness_comparison.json").open("w", encoding="utf-8") as handle:
+        json.dump(comparison, handle, indent=2)
+    if config.output.save_plot:
+        _save_robustness_comparison_plot(rows, directory / "robustness_comparison.png")
     return directory
