@@ -5,11 +5,11 @@
 [![MuJoCo](https://img.shields.io/badge/MuJoCo-4.x-00A6D6.svg)](https://mujoco.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A reproducible MuJoCo control benchmark for a 7-DoF Panda arm: joint trajectory tracking, Cartesian impedance control, contact-aware peg-in-hole insertion, and automated robustness evaluation. It includes both a lightweight development model and the official MuJoCo Menagerie Franka model.
+A reproducible MuJoCo control benchmark for a 7-DoF Panda arm: joint trajectory tracking, Cartesian impedance control, contact-aware peg-in-hole insertion, and automated robustness evaluation. It includes paired, seeded Monte Carlo controller evaluation, a lightweight development model, and the official MuJoCo Menagerie Franka model.
 
 这是有意收敛范围的 Python + MuJoCo MVP；ROS2、视觉、强化学习和真机部署留作后续扩展。
 
-GitHub Actions 会在标准 Linux runner 上执行 lint、单元测试、轻量模型完整实验和官方模型的关节/笛卡尔/插孔实验，并保存可下载的 CSV、JSON 与 PNG 结果，确保仓库不是“只能看、不能跑”的演示代码。
+GitHub Actions 会在标准 Linux runner 上执行 lint、单元测试、轻量模型完整实验、官方模型的关节/笛卡尔/插孔实验和随机扰动对比，并保存可下载的 CSV、JSON 与 PNG 结果，确保仓库不是“只能看、不能跑”的演示代码。
 
 ## Verified results
 
@@ -68,7 +68,20 @@ The same two controllers were also evaluated across eight deterministic scenario
 | Cartesian impedance | **8 / 8** | **67.5 N** | 140.7 N | 7.884 s |
 | Cartesian position | **8 / 8** | 109.4 N | **129.1 N** | **7.821 s** |
 
-Both controllers passed this fixed matrix, so it does not establish a success-rate advantage. Position control produced **1.62×** the mean peak force, while impedance control had the lower peak in seven of eight scenarios. The combined disturbance is the important counterexample: lateral impact raised the impedance peak above the position baseline. Friction-only cases remained centered and therefore did not materially excite wall friction. These are deterministic regression results, not confidence intervals; randomized trials are the next experimental stage. Evidence comes from [GitHub Actions run 44169284923](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44169284923).
+Both controllers passed this fixed matrix, so it does not establish a success-rate advantage. Position control produced **1.62×** the mean peak force, while impedance control had the lower peak in seven of eight scenarios. The combined disturbance is the important counterexample: lateral impact raised the impedance peak above the position baseline. Friction-only cases remained centered and therefore did not materially excite wall friction. These are deterministic regression results, not confidence intervals. Evidence comes from [GitHub Actions run 44169284923](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44169284923).
+
+## Seeded Monte Carlo comparison
+
+![Seeded Monte Carlo controller comparison](docs/results/monte-carlo/monte_carlo_summary.png)
+
+Both controllers were evaluated on the same 20 sampled disturbances (`seed = 20261117`). Fixture X/Y errors were sampled independently from ±10 mm, friction scale from 0.6–1.4, and tool-mass scale from 0.8–1.2.
+
+| Controller | Success rate (Wilson 95% CI) | Mean peak force (95% CI) | Worst peak force |
+| --- | ---: | ---: | ---: |
+| Cartesian impedance | 4/20, **20%** (8.1–41.6%) | **122.0 N** (105.2–138.7 N) | **150.5 N** |
+| Cartesian position | 5/20, 25% (11.2–46.9%) | 438.6 N (135.8–741.5 N) | 3310.3 N |
+
+The success intervals overlap substantially, so this initial sample does **not** establish a success-rate winner. Paired outcomes were: both succeeded in 4 cases, position only in 1, impedance only in 0, and neither in 15. The meaningful difference is contact severity: the position controller averaged **316.7 N more peak force per paired trial** and produced a 3.31 kN simulated impact while jammed; the impedance controller stayed below 151 N. These simulation forces are comparative metrics, not hardware predictions. Full evidence comes from [GitHub Actions run 44173170765](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44173170765) and is committed under `docs/results/monte-carlo/`.
 
 ## 已实现
 
@@ -78,6 +91,7 @@ Both controllers passed this fixed matrix, so it does not establish a success-ra
 - 末端 Jacobian、位置/姿态误差、笛卡尔阻抗与零空间姿态控制；
 - 阻尼伪逆笛卡尔位置环与高刚度关节伺服，可和阻抗控制同条件对比；
 - 两种控制器在同一组位姿、摩擦和质量扰动下的配对批量实验；
+- 固定随机种子的 20 组配对 Monte Carlo 实验、Wilson 成功率区间和接触力均值区间；
 - 方孔插入任务、接触力读取和成功判据；
 - 孔位、摩擦和工具质量扰动的批量实验；
 - CSV 时序数据、JSON 摘要和可选 PNG 曲线；
@@ -132,6 +146,12 @@ python -m panda_assembly compare --config configs\menagerie.toml --output runs\c
 python -m panda_assembly compare-batch --config configs\menagerie.toml --output runs\controller_robustness
 ```
 
+运行固定种子的 20 组随机扰动配对实验：
+
+```powershell
+python -m panda_assembly monte-carlo --config configs\menagerie.toml --output runs\monte_carlo
+```
+
 也可以单独运行位置控制：
 
 ```powershell
@@ -153,7 +173,7 @@ runs/<experiment>/
 └── metrics.png        # 误差与接触力曲线（安装 matplotlib 时）
 ```
 
-批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。
+批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。Monte Carlo 模式生成 `monte_carlo_trials.csv`、`monte_carlo_summary.json` 与带置信区间的 `monte_carlo_summary.png`。
 
 ## 指标定义
 
@@ -177,7 +197,7 @@ src/panda_assembly/
 ├── assets/panda_menagerie.xml   # 基于官方 Panda 的高保真装配场景
 ├── assets/menagerie/             # 固定版本的官方模型、网格与许可证
 ├── controllers.py               # 关节 PD / 笛卡尔位置 / 笛卡尔阻抗
-├── experiments.py               # joint / cartesian / peg / compare / compare-batch / batch
+├── experiments.py               # 单次、固定扰动和 Monte Carlo 实验编排
 ├── math_utils.py                # 姿态误差与阻尼零空间投影
 ├── metrics.py                   # 指标、CSV、JSON、曲线
 ├── model.py                     # 模型加载与接口校验
@@ -191,13 +211,13 @@ tests/                            # 配置、数学、轨迹与模型测试
 2. 对比不同 `Kp/Kd` 的跟踪误差与力矩饱和；
 3. 验证 Jacobian 与笛卡尔阻抗，记录位置/姿态阶跃响应；
 4. 插孔接触、成功判据、孔位/摩擦/质量扰动；
-5. 固化实验种子和配置，补结果表、README 图与两分钟演示视频。
+5. 固化实验种子和配置，补结果表、README 图与两分钟演示视频（数据与图已完成）。
 
 ## 后续升级顺序
 
-1. 固定随机种子，扩展多次 Monte Carlo 实验和置信区间；
-2. 扫描孔位误差范围，寻找两种控制器的失效边界；
-3. 为官方模型建立失败类型统计与参数敏感性分析；
+1. 扫描孔位误差范围，寻找两种控制器的失效边界；
+2. 增加样本量，并按卡住、偏孔和冲击过大建立失败类型统计；
+3. 做参数敏感性分析，区分位姿、摩擦和质量的贡献；
 4. 考试后再接 ROS2/`ros2_control`、MoveIt2 与 residual RL。
 
 ## 简历表述
