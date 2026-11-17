@@ -5,7 +5,7 @@
 [![MuJoCo](https://img.shields.io/badge/MuJoCo-4.x-00A6D6.svg)](https://mujoco.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A reproducible MuJoCo control benchmark for a 7-DoF Panda arm: joint trajectory tracking, Cartesian impedance control, contact-aware peg-in-hole insertion, and automated robustness evaluation. It includes paired, seeded Monte Carlo controller evaluation, a lightweight development model, and the official MuJoCo Menagerie Franka model.
+A reproducible MuJoCo control benchmark for a 7-DoF Panda arm: joint trajectory tracking, Cartesian impedance control, contact-aware peg-in-hole insertion, and automated robustness evaluation. It includes paired Monte Carlo evaluation, directional failure-boundary mapping, a lightweight development model, and the official MuJoCo Menagerie Franka model.
 
 这是有意收敛范围的 Python + MuJoCo MVP；ROS2、视觉、强化学习和真机部署留作后续扩展。
 
@@ -83,6 +83,25 @@ Both controllers were evaluated on the same 20 sampled disturbances (`seed = 202
 
 The success intervals overlap substantially, so this initial sample does **not** establish a success-rate winner. Paired outcomes were: both succeeded in 4 cases, position only in 1, impedance only in 0, and neither in 15. The meaningful difference is contact severity: the position controller averaged **316.7 N more peak force per paired trial** and produced a 3.31 kN simulated impact while jammed; the impedance controller stayed below 151 N. These simulation forces are comparative metrics, not hardware predictions. Full evidence comes from [GitHub Actions run 44173170765](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44173170765) and is committed under `docs/results/monte-carlo/`.
 
+## Directional failure boundary
+
+![Directional insertion failure boundary](docs/results/boundary-scan/boundary_scan_summary.png)
+
+A deterministic radial scan holds friction and tool mass at their nominal values while moving the socket in eight directions from 0–12 mm in 2 mm steps. The boundary is the largest tested offset for which every smaller offset in the same direction also succeeds.
+
+| Direction | Impedance boundary | Position boundary |
+| --- | ---: | ---: |
+| +X | 4 mm (first fail: 6 mm) | **6 mm** (first fail: 8 mm) |
+| +X+Y | 4 mm (first fail: 6 mm) | 4 mm (first fail: 6 mm) |
+| +Y | 4 mm (first fail: 6 mm) | 4 mm (first fail: 6 mm) |
+| -X+Y | 4 mm (first fail: 6 mm) | 4 mm (first fail: 6 mm) |
+| -X | **6 mm** (first fail: 8 mm) | 4 mm (first fail: 6 mm) |
+| -X-Y | 4 mm (first fail: 6 mm) | 4 mm (first fail: 6 mm) |
+| -Y | 4 mm (first fail: 6 mm) | 4 mm (first fail: 6 mm) |
+| +X-Y | 4 mm (first fail: 6 mm) | 4 mm (first fail: 6 mm) |
+
+Both controllers therefore have a **4 mm contiguous success radius across all eight tested directions** at this scan resolution. At 6 mm, each succeeds in only one of eight directions, but in opposite directions. Position control also re-entered geometric success at 8 mm in two diagonal directions after failing at 6 mm; those non-monotonic cases required 872–886 N and are not evidence of a reliable larger boundary. Worst scan forces were **1.46 kN for impedance** and **3.07 kN for position**, showing that even impedance control can generate severe simulated loads when a diagonal contact jams. These are geometric simulation boundaries, not hardware tolerances or safety certifications. Evidence comes from [GitHub Actions run 44175719284](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44175719284).
+
 ## 已实现
 
 - 自带无网格依赖的 7-DoF Panda 风格 MJCF，可立即验证控制代码；
@@ -92,6 +111,7 @@ The success intervals overlap substantially, so this initial sample does **not**
 - 阻尼伪逆笛卡尔位置环与高刚度关节伺服，可和阻抗控制同条件对比；
 - 两种控制器在同一组位姿、摩擦和质量扰动下的配对批量实验；
 - 固定随机种子的 20 组配对 Monte Carlo 实验、Wilson 成功率区间和接触力均值区间；
+- 八方向、0–12 mm 的失效边界扫描，以及非单调成功检测；
 - 方孔插入任务、接触力读取和成功判据；
 - 孔位、摩擦和工具质量扰动的批量实验；
 - CSV 时序数据、JSON 摘要和可选 PNG 曲线；
@@ -152,6 +172,12 @@ python -m panda_assembly compare-batch --config configs\menagerie.toml --output 
 python -m panda_assembly monte-carlo --config configs\menagerie.toml --output runs\monte_carlo
 ```
 
+运行八方向孔位偏差边界扫描：
+
+```powershell
+python -m panda_assembly boundary-scan --config configs\menagerie.toml --output runs\boundary_scan
+```
+
 也可以单独运行位置控制：
 
 ```powershell
@@ -173,7 +199,7 @@ runs/<experiment>/
 └── metrics.png        # 误差与接触力曲线（安装 matplotlib 时）
 ```
 
-批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。Monte Carlo 模式生成 `monte_carlo_trials.csv`、`monte_carlo_summary.json` 与带置信区间的 `monte_carlo_summary.png`。
+批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。Monte Carlo 模式生成 `monte_carlo_trials.csv`、`monte_carlo_summary.json` 与带置信区间的 `monte_carlo_summary.png`；边界扫描生成对应的 `boundary_scan_trials.csv`、JSON 摘要和三联图。
 
 ## 指标定义
 
@@ -215,9 +241,9 @@ tests/                            # 配置、数学、轨迹与模型测试
 
 ## 后续升级顺序
 
-1. 扫描孔位误差范围，寻找两种控制器的失效边界；
-2. 增加样本量，并按卡住、偏孔和冲击过大建立失败类型统计；
-3. 做参数敏感性分析，区分位姿、摩擦和质量的贡献；
+1. 在 4–8 mm 转换区间用 0.5 mm 步长细化边界；
+2. 增加接触力阈值，区分“几何成功”和“安全成功”；
+3. 按卡住、偏孔和冲击过大建立失败类型与参数敏感性统计；
 4. 考试后再接 ROS2/`ros2_control`、MoveIt2 与 residual RL。
 
 ## 简历表述
