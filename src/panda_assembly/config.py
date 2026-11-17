@@ -73,6 +73,12 @@ class MonteCarloConfig:
 
 
 @dataclass(frozen=True)
+class BoundaryScanConfig:
+    max_offset_m: float
+    step_m: float
+
+
+@dataclass(frozen=True)
 class OutputConfig:
     root: str
     save_csv: bool
@@ -88,6 +94,7 @@ class ProjectConfig:
     cartesian_position_controller: CartesianPositionControllerConfig
     peg_task: PegTaskConfig
     monte_carlo: MonteCarloConfig
+    boundary_scan: BoundaryScanConfig
     output: OutputConfig
 
 
@@ -106,6 +113,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     cartesian_position = raw["cartesian_position_controller"]
     peg = raw["peg_task"]
     monte_carlo = raw["monte_carlo"]
+    boundary_scan = raw["boundary_scan"]
     output = raw["output"]
 
     config = ProjectConfig(
@@ -180,6 +188,10 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             tool_mass_scale_min=float(monte_carlo["tool_mass_scale_min"]),
             tool_mass_scale_max=float(monte_carlo["tool_mass_scale_max"]),
         ),
+        boundary_scan=BoundaryScanConfig(
+            max_offset_m=float(boundary_scan["max_offset_m"]),
+            step_m=float(boundary_scan["step_m"]),
+        ),
         output=OutputConfig(
             root=str(output["root"]),
             save_csv=bool(output["save_csv"]),
@@ -200,6 +212,11 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         raise ValueError("monte_carlo friction scale bounds are reversed")
     if config.monte_carlo.tool_mass_scale_min > config.monte_carlo.tool_mass_scale_max:
         raise ValueError("monte_carlo tool mass scale bounds are reversed")
+    if config.boundary_scan.max_offset_m <= 0 or config.boundary_scan.step_m <= 0:
+        raise ValueError("boundary_scan offsets must be positive")
+    boundary_steps = config.boundary_scan.max_offset_m / config.boundary_scan.step_m
+    if not abs(boundary_steps - round(boundary_steps)) < 1e-9:
+        raise ValueError("boundary_scan.max_offset_m must be divisible by step_m")
     times = (
         config.peg_task.approach_time,
         config.peg_task.align_time,

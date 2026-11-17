@@ -39,6 +39,16 @@ class Variation:
     tool_mass_scale: float = 1.0
 
 
+@dataclass(frozen=True)
+class BoundaryScanPoint:
+    scenario: str
+    direction: str
+    direction_label: str
+    angle_deg: float | None
+    offset_m: float
+    variation: Variation
+
+
 ROBUSTNESS_SCENARIOS = (
     ("nominal", Variation()),
     ("pose_x_plus_2mm", Variation(lateral_offset_x=0.002)),
@@ -51,6 +61,19 @@ ROBUSTNESS_SCENARIOS = (
         "combined",
         Variation(lateral_offset_x=0.0055, friction_scale=1.4, tool_mass_scale=1.2),
     ),
+)
+
+
+_SQRT_HALF = 0.7071067811865476
+BOUNDARY_DIRECTIONS = (
+    ("x_pos", "+X", 0.0, 1.0, 0.0),
+    ("xy_pos", "+X+Y", 45.0, _SQRT_HALF, _SQRT_HALF),
+    ("y_pos", "+Y", 90.0, 0.0, 1.0),
+    ("x_neg_y_pos", "-X+Y", 135.0, -_SQRT_HALF, _SQRT_HALF),
+    ("x_neg", "-X", 180.0, -1.0, 0.0),
+    ("xy_neg", "-X-Y", 225.0, -_SQRT_HALF, -_SQRT_HALF),
+    ("y_neg", "-Y", 270.0, 0.0, -1.0),
+    ("x_pos_y_neg", "+X-Y", 315.0, _SQRT_HALF, -_SQRT_HALF),
 )
 
 
@@ -845,4 +868,268 @@ def run_monte_carlo_comparison(config: ProjectConfig, output: Path | None = None
         json.dump(result, handle, indent=2)
     if config.output.save_plot:
         _save_monte_carlo_plot(rows, aggregates, directory / "monte_carlo_summary.png")
+    return directory
+
+
+def _boundary_scan_points(config: ProjectConfig) -> tuple[BoundaryScanPoint, ...]:
+    """Return the unique origin and eight-direction radial scan points."""
+    scan = config.boundary_scan
+    steps = int(round(scan.max_offset_m / scan.step_m))
+    points = [
+        BoundaryScanPoint(
+            scenario="origin",
+            direction="origin",
+            direction_label="origin",
+            angle_deg=None,
+            offset_m=0.0,
+            variation=Variation(),
+        )
+    ]
+    for step_index in range(1, steps + 1):
+        offset = step_index * scan.step_m
+        offset_mm = int(round(1000.0 * offset))
+        for direction, label, angle_deg, x_unit, y_unit in BOUNDARY_DIRECTIONS:
+            points.append(
+                BoundaryScanPoint(
+                    scenario=f"{direction}_{offset_mm:03d}mm",
+                    direction=direction,
+                    direction_label=label,
+                    angle_deg=angle_deg,
+                    offset_m=offset,
+                    variation=Variation(
+                        lateral_offset_x=offset * x_unit,
+                        lateral_offset_y=offset * y_unit,
+                    ),
+                )
+            )
+    return tuple(points)
+
+
+def _direction_boundary_summary(
+    controller_rows: list[dict[str, object]], direction: str
+) -> dict[str, object]:
+    origin = next(row for row in controller_rows if row["direction"] == "origin")
+    rows = [origin] + [row for row in controller_rows if row["direction"] == direction]
+    rows.sort(key=lambda row: float(row["offset_m"]))
+    first_failure_index = next(
+        (index for index, row in enumerate(rows) if not bool(row["success"])), None
+    )
+    successful_offsets = [float(row["offset_m"]) for row in rows if bool(row["success"])]
+    if first_failure_index is None:
+        contiguous_limit = float(rows[-1]["offset_m"])
+        first_failure_offset = None
+        non_monotonic = False
+    else:
+        contiguous_limit = (
+            float(rows[first_failure_index - 1]["offset_m"]) if first_failure_index > 0 else None
+        )
+        first_failure_offset = float(rows[first_failure_index]["offset_m"])
+        non_monotonic = any(bool(row["success"]) for row in rows[first_failure_index + 1 :])
+    return {
+        "origin_success": bool(origin["success"]),
+        "contiguous_success_limit_m": contiguous_limit,
+        "first_failure_offset_m": first_failure_offset,
+        "boundary_bracket_m": (
+            [contiguous_limit, first_failure_offset]
+            if contiguous_limit is not None and first_failure_offset is not None
+            else None
+        ),
+        "maximum_successful_offset_m": max(successful_offsets) if successful_offsets else None,
+        "non_monotonic_success": non_monotonic,
+        "max_peak_contact_force_n": max(float(row["max_contact_force_n"]) for row in rows),
+    }
+
+
+def _boundary_controller_summary(
+    controller_rows: list[dict[str, object]], config: ProjectConfig
+) -> dict[str, object]:
+    directions = {
+        direction: {
+            "label": label,
+            "angle_deg": angle_deg,
+            **_direction_boundary_summary(controller_rows, direction),
+        }
+        for direction, label, angle_deg, _, _ in BOUNDARY_DIRECTIONS
+    }
+    steps = int(round(config.boundary_scan.max_offset_m / config.boundary_scan.step_m))
+    offset_summaries: list[dict[str, object]] = []
+    for step_index in range(steps + 1):
+        offset = step_index * config.boundary_scan.step_m
+        offset_rows = [
+            row for row in controller_rows if abs(float(row["offset_m"]) - offset) < 1e-12
+        ]
+        successes = sum(bool(row["success"]) for row in offset_rows)
+        offset_summaries.append(
+            {
+                "offset_m": offset,
+                "evaluations": len(offset_rows),
+                "successes": successes,
+                "success_fraction": successes / len(offset_rows),
+                "worst_peak_contact_force_n": max(
+                    float(row["max_contact_force_n"]) for row in offset_rows
+                ),
+            }
+        )
+    limits = [float(values["contiguous_success_limit_m"] or 0.0) for values in directions.values()]
+    return {
+        "evaluations": len(controller_rows),
+        "successes": sum(bool(row["success"]) for row in controller_rows),
+        "origin_success": bool(
+            next(row["success"] for row in controller_rows if row["direction"] == "origin")
+        ),
+        "isotropic_contiguous_success_radius_m": min(limits),
+        "best_direction_contiguous_success_limit_m": max(limits),
+        "non_monotonic_directions": [
+            direction
+            for direction, values in directions.items()
+            if bool(values["non_monotonic_success"])
+        ],
+        "directions": directions,
+        "offset_summary": offset_summaries,
+    }
+
+
+def _save_boundary_scan_plot(
+    aggregates: dict[str, dict[str, object]], config: ProjectConfig, path: Path
+) -> bool:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    colors = {"impedance": "#2166ac", "position": "#b2182b"}
+    direction_angles = np.radians([values[2] for values in BOUNDARY_DIRECTIONS])
+    closed_angles = np.append(direction_angles, direction_angles[0])
+    figure = plt.figure(figsize=(16, 5.5))
+    polar_axis = figure.add_subplot(1, 3, 1, projection="polar")
+    success_axis = figure.add_subplot(1, 3, 2)
+    force_axis = figure.add_subplot(1, 3, 3)
+
+    for controller_kind in ("impedance", "position"):
+        aggregate = aggregates[controller_kind]
+        direction_values = aggregate["directions"]
+        limits = [
+            1000.0 * float(direction_values[direction]["contiguous_success_limit_m"] or 0.0)
+            for direction, _, _, _, _ in BOUNDARY_DIRECTIONS
+        ]
+        closed_limits = np.append(limits, limits[0])
+        polar_axis.plot(
+            closed_angles,
+            closed_limits,
+            marker="o",
+            color=colors[controller_kind],
+            label=controller_kind,
+        )
+        polar_axis.fill(closed_angles, closed_limits, color=colors[controller_kind], alpha=0.08)
+
+        offset_summary = aggregate["offset_summary"]
+        offsets_mm = [1000.0 * float(row["offset_m"]) for row in offset_summary]
+        success_fractions = [float(row["success_fraction"]) for row in offset_summary]
+        worst_forces = [float(row["worst_peak_contact_force_n"]) for row in offset_summary]
+        success_axis.plot(
+            offsets_mm,
+            success_fractions,
+            marker="o",
+            color=colors[controller_kind],
+            label=controller_kind,
+        )
+        force_axis.plot(
+            offsets_mm,
+            worst_forces,
+            marker="o",
+            color=colors[controller_kind],
+            label=controller_kind,
+        )
+
+    polar_axis.set_theta_zero_location("E")
+    polar_axis.set_theta_direction(1)
+    polar_axis.set_xticks(
+        direction_angles,
+        labels=[values[1] for values in BOUNDARY_DIRECTIONS],
+    )
+    polar_axis.set_ylim(0.0, 1000.0 * config.boundary_scan.max_offset_m)
+    polar_axis.set_title("Contiguous success boundary [mm]")
+    polar_axis.grid(alpha=0.3)
+    polar_axis.legend(loc="upper right", bbox_to_anchor=(1.25, 1.15))
+
+    success_axis.set_xlabel("Fixture offset [mm]")
+    success_axis.set_ylabel("Successful directions / tested directions")
+    success_axis.set_ylim(-0.04, 1.04)
+    success_axis.grid(alpha=0.25)
+    success_axis.legend()
+
+    force_axis.set_xlabel("Fixture offset [mm]")
+    force_axis.set_ylabel("Worst peak contact force [N]")
+    force_axis.set_yscale("log")
+    force_axis.grid(alpha=0.25, which="both")
+    force_axis.legend()
+    figure.tight_layout()
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+    return True
+
+
+def run_controller_boundary_scan(config: ProjectConfig, output: Path | None = None) -> Path:
+    """Map directional insertion limits for both controllers at nominal friction and mass."""
+    directory = _output_directory(config, "boundary_scan", output)
+    directory.mkdir(parents=True, exist_ok=True)
+    trial_config = replace(
+        config,
+        output=replace(config.output, save_csv=False, save_plot=False),
+    )
+    rows: list[dict[str, object]] = []
+    for point in _boundary_scan_points(config):
+        for controller_kind in ("impedance", "position"):
+            summary, _ = run_peg(
+                trial_config,
+                viewer=False,
+                output=directory / point.scenario / controller_kind,
+                variation=point.variation,
+                controller_kind=controller_kind,
+            )
+            rows.append(
+                {
+                    "scenario": point.scenario,
+                    "direction": point.direction,
+                    "direction_label": point.direction_label,
+                    "angle_deg": point.angle_deg,
+                    "offset_m": point.offset_m,
+                    **asdict(point.variation),
+                    **asdict(summary),
+                }
+            )
+
+    with (directory / "boundary_scan_trials.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    controller_rows = {
+        controller_kind: [row for row in rows if row["controller"] == controller_kind]
+        for controller_kind in ("impedance", "position")
+    }
+    aggregates = {
+        controller_kind: _boundary_controller_summary(values, config)
+        for controller_kind, values in controller_rows.items()
+    }
+    result = {
+        "model_variant": config.model.variant,
+        "scan": asdict(config.boundary_scan),
+        "directions": [
+            {"name": name, "label": label, "angle_deg": angle_deg}
+            for name, label, angle_deg, _, _ in BOUNDARY_DIRECTIONS
+        ],
+        "boundary_definition": (
+            "largest tested radius for which every smaller tested radius in the same "
+            "direction also succeeded"
+        ),
+        "nominal_friction_scale": 1.0,
+        "nominal_tool_mass_scale": 1.0,
+        "aggregates": aggregates,
+        "trials": rows,
+    }
+    with (directory / "boundary_scan_summary.json").open("w", encoding="utf-8") as handle:
+        json.dump(result, handle, indent=2)
+    if config.output.save_plot:
+        _save_boundary_scan_plot(aggregates, config, directory / "boundary_scan_summary.png")
     return directory

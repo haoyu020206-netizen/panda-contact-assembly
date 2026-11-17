@@ -49,6 +49,10 @@ friction_scale_max = 1.4
 tool_mass_scale_min = 0.8
 tool_mass_scale_max = 1.2
 
+[boundary_scan]
+max_offset_m = 0.012
+step_m = 0.002
+
 [output]
 root = "runs"
 save_csv = true

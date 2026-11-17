@@ -3,7 +3,9 @@ from pathlib import Path
 
 from panda_assembly.config import load_config
 from panda_assembly.experiments import (
+    BOUNDARY_DIRECTIONS,
     ROBUSTNESS_SCENARIOS,
+    _boundary_scan_points,
     _monte_carlo_variations,
     run_joint,
     wilson_score_interval,
@@ -58,3 +60,24 @@ def test_wilson_interval_contains_observed_rate() -> None:
     lower, upper = wilson_score_interval(12, 20)
     assert lower < 0.6 < upper
     assert 0.0 <= lower <= upper <= 1.0
+
+
+def test_boundary_scan_points_are_unique_and_radial() -> None:
+    config = load_config(CONFIG)
+    points = _boundary_scan_points(config)
+    steps = round(config.boundary_scan.max_offset_m / config.boundary_scan.step_m)
+
+    assert len(points) == 1 + steps * len(BOUNDARY_DIRECTIONS)
+    assert points[0].scenario == "origin"
+    assert len({point.scenario for point in points}) == len(points)
+    assert {point.direction for point in points[1:]} == {
+        direction for direction, _, _, _, _ in BOUNDARY_DIRECTIONS
+    }
+    assert all(
+        abs(
+            (point.variation.lateral_offset_x**2 + point.variation.lateral_offset_y**2) ** 0.5
+            - point.offset_m
+        )
+        < 1e-12
+        for point in points
+    )

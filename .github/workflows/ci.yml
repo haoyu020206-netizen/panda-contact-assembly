@@ -80,6 +80,9 @@ jobs:
           python -m panda_assembly monte-carlo \
             --config configs/menagerie.toml \
             --output showcase-results/monte-carlo
+          python -m panda_assembly boundary-scan \
+            --config configs/menagerie.toml \
+            --output showcase-results/boundary-scan
 
       - name: Render verified final scene
         env:
