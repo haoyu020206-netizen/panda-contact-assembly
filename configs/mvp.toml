@@ -40,6 +40,15 @@ target_depth = 0.060
 clearance = 0.005
 nominal_friction = 0.8
 
+[monte_carlo]
+seed = 20261117
+trials = 20
+lateral_offset_limit_m = 0.010
+friction_scale_min = 0.6
+friction_scale_max = 1.4
+tool_mass_scale_min = 0.8
+tool_mass_scale_max = 1.2
+
 [output]
 root = "runs"
 save_csv = true

@@ -4,7 +4,7 @@ import csv
 import json
 import time
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from pathlib import Path
 
@@ -630,4 +630,219 @@ def run_controller_robustness_comparison(config: ProjectConfig, output: Path | N
         json.dump(comparison, handle, indent=2)
     if config.output.save_plot:
         _save_robustness_comparison_plot(rows, directory / "robustness_comparison.png")
+    return directory
+
+
+def _monte_carlo_variations(config: ProjectConfig) -> tuple[Variation, ...]:
+    values = config.monte_carlo
+    generator = np.random.default_rng(values.seed)
+    return tuple(
+        Variation(
+            lateral_offset_x=float(
+                generator.uniform(-values.lateral_offset_limit_m, values.lateral_offset_limit_m)
+            ),
+            lateral_offset_y=float(
+                generator.uniform(-values.lateral_offset_limit_m, values.lateral_offset_limit_m)
+            ),
+            friction_scale=float(
+                generator.uniform(values.friction_scale_min, values.friction_scale_max)
+            ),
+            tool_mass_scale=float(
+                generator.uniform(values.tool_mass_scale_min, values.tool_mass_scale_max)
+            ),
+        )
+        for _ in range(values.trials)
+    )
+
+
+def wilson_score_interval(
+    successes: int, trials: int, z_score: float = 1.96
+) -> tuple[float, float]:
+    """Return a Wilson score confidence interval for a binomial success rate."""
+    if trials <= 0:
+        raise ValueError("trials must be positive")
+    proportion = successes / trials
+    z_squared = z_score * z_score
+    denominator = 1.0 + z_squared / trials
+    center = (proportion + z_squared / (2.0 * trials)) / denominator
+    margin = (
+        z_score
+        * np.sqrt(proportion * (1.0 - proportion) / trials + z_squared / (4.0 * trials * trials))
+        / denominator
+    )
+    return float(center - margin), float(center + margin)
+
+
+def _mean_confidence_interval(values: list[float]) -> tuple[float, float]:
+    mean = float(np.mean(values))
+    if len(values) < 2:
+        return mean, mean
+    margin = 1.96 * float(np.std(values, ddof=1)) / np.sqrt(len(values))
+    return mean - margin, mean + margin
+
+
+def _monte_carlo_aggregate(rows: list[dict[str, object]]) -> dict[str, object]:
+    successes = sum(bool(row["success"]) for row in rows)
+    forces = [float(row["max_contact_force_n"]) for row in rows]
+    completion_times = [
+        float(row["completion_time_s"]) for row in rows if row["completion_time_s"] is not None
+    ]
+    return {
+        "trials": len(rows),
+        "successes": successes,
+        "success_rate": successes / len(rows),
+        "success_rate_wilson_ci95": list(wilson_score_interval(successes, len(rows))),
+        "mean_peak_contact_force_n": float(np.mean(forces)),
+        "mean_peak_contact_force_ci95_n": list(_mean_confidence_interval(forces)),
+        "max_peak_contact_force_n": float(np.max(forces)),
+        "mean_completion_time_s_successes": (
+            float(np.mean(completion_times)) if completion_times else None
+        ),
+    }
+
+
+def _save_monte_carlo_plot(
+    rows: list[dict[str, object]], aggregates: dict[str, dict[str, object]], path: Path
+) -> bool:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    controller_names = ("impedance", "position")
+    colors = {"impedance": "#2166ac", "position": "#b2182b"}
+    figure, axes = plt.subplots(2, 1, figsize=(10, 8))
+
+    success_rates = [float(aggregates[name]["success_rate"]) for name in controller_names]
+    intervals = [aggregates[name]["success_rate_wilson_ci95"] for name in controller_names]
+    lower_errors = [
+        rate - float(interval[0]) for rate, interval in zip(success_rates, intervals, strict=True)
+    ]
+    upper_errors = [
+        float(interval[1]) - rate for rate, interval in zip(success_rates, intervals, strict=True)
+    ]
+    axes[0].bar(
+        controller_names,
+        success_rates,
+        color=[colors[name] for name in controller_names],
+        yerr=np.asarray([lower_errors, upper_errors]),
+        capsize=6,
+    )
+    axes[0].set_ylim(0.0, 1.08)
+    axes[0].set_ylabel("Success rate with Wilson 95% CI")
+    axes[0].grid(axis="y", alpha=0.25)
+
+    for controller_kind in controller_names:
+        controller_rows = [row for row in rows if row["controller"] == controller_kind]
+        controller_rows.sort(key=lambda row: float(row["lateral_offset_norm_m"]))
+        offsets = [1000.0 * float(row["lateral_offset_norm_m"]) for row in controller_rows]
+        forces = [float(row["max_contact_force_n"]) for row in controller_rows]
+        axes[1].plot(
+            offsets,
+            forces,
+            marker="o",
+            color=colors[controller_kind],
+            label=controller_kind,
+            alpha=0.8,
+        )
+        failed_offsets = [
+            1000.0 * float(row["lateral_offset_norm_m"])
+            for row in controller_rows
+            if not bool(row["success"])
+        ]
+        failed_forces = [
+            float(row["max_contact_force_n"]) for row in controller_rows if not bool(row["success"])
+        ]
+        axes[1].scatter(
+            failed_offsets,
+            failed_forces,
+            marker="x",
+            s=70,
+            linewidths=2,
+            color=colors[controller_kind],
+        )
+    axes[1].set_xlabel("Lateral fixture error norm [mm]")
+    axes[1].set_ylabel("Peak contact force [N]")
+    axes[1].grid(alpha=0.25)
+    axes[1].legend()
+    figure.tight_layout()
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+    return True
+
+
+def run_monte_carlo_comparison(config: ProjectConfig, output: Path | None = None) -> Path:
+    """Run paired, reproducible random disturbances for both Cartesian controllers."""
+    directory = _output_directory(config, "monte_carlo", output)
+    directory.mkdir(parents=True, exist_ok=True)
+    trial_config = replace(config, output=replace(config.output, save_plot=False))
+    rows: list[dict[str, object]] = []
+    for index, variation in enumerate(_monte_carlo_variations(config)):
+        trial_name = f"trial_{index:03d}"
+        offset_norm = float(np.hypot(variation.lateral_offset_x, variation.lateral_offset_y))
+        for controller_kind in ("impedance", "position"):
+            summary, _ = run_peg(
+                trial_config,
+                viewer=False,
+                output=directory / trial_name / controller_kind,
+                variation=variation,
+                controller_kind=controller_kind,
+            )
+            rows.append(
+                {
+                    "trial": trial_name,
+                    "seed": config.monte_carlo.seed,
+                    "lateral_offset_norm_m": offset_norm,
+                    **asdict(variation),
+                    **asdict(summary),
+                }
+            )
+
+    with (directory / "monte_carlo_trials.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    controller_rows = {
+        controller_kind: [row for row in rows if row["controller"] == controller_kind]
+        for controller_kind in ("impedance", "position")
+    }
+    aggregates = {
+        controller_kind: _monte_carlo_aggregate(values)
+        for controller_kind, values in controller_rows.items()
+    }
+    paired_outcomes = {"both_succeed": 0, "impedance_only": 0, "position_only": 0, "neither": 0}
+    paired_force_differences: list[float] = []
+    for index in range(config.monte_carlo.trials):
+        impedance = controller_rows["impedance"][index]
+        position = controller_rows["position"][index]
+        impedance_success = bool(impedance["success"])
+        position_success = bool(position["success"])
+        if impedance_success and position_success:
+            paired_outcomes["both_succeed"] += 1
+        elif impedance_success:
+            paired_outcomes["impedance_only"] += 1
+        elif position_success:
+            paired_outcomes["position_only"] += 1
+        else:
+            paired_outcomes["neither"] += 1
+        paired_force_differences.append(
+            float(position["max_contact_force_n"]) - float(impedance["max_contact_force_n"])
+        )
+
+    result = {
+        "model_variant": config.model.variant,
+        "seed": config.monte_carlo.seed,
+        "sampling": asdict(config.monte_carlo),
+        "aggregates": aggregates,
+        "paired_outcomes": paired_outcomes,
+        "mean_paired_position_minus_impedance_peak_force_n": float(
+            np.mean(paired_force_differences)
+        ),
+        "trials": rows,
+    }
+    with (directory / "monte_carlo_summary.json").open("w", encoding="utf-8") as handle:
+        json.dump(result, handle, indent=2)
+    if config.output.save_plot:
+        _save_monte_carlo_plot(rows, aggregates, directory / "monte_carlo_summary.png")
     return directory

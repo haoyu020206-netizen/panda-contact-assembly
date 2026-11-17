@@ -62,6 +62,17 @@ class PegTaskConfig:
 
 
 @dataclass(frozen=True)
+class MonteCarloConfig:
+    seed: int
+    trials: int
+    lateral_offset_limit_m: float
+    friction_scale_min: float
+    friction_scale_max: float
+    tool_mass_scale_min: float
+    tool_mass_scale_max: float
+
+
+@dataclass(frozen=True)
 class OutputConfig:
     root: str
     save_csv: bool
@@ -76,6 +87,7 @@ class ProjectConfig:
     cartesian_controller: CartesianControllerConfig
     cartesian_position_controller: CartesianPositionControllerConfig
     peg_task: PegTaskConfig
+    monte_carlo: MonteCarloConfig
     output: OutputConfig
 
 
@@ -93,6 +105,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     cartesian = raw["cartesian_controller"]
     cartesian_position = raw["cartesian_position_controller"]
     peg = raw["peg_task"]
+    monte_carlo = raw["monte_carlo"]
     output = raw["output"]
 
     config = ProjectConfig(
@@ -158,6 +171,15 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             clearance=float(peg["clearance"]),
             nominal_friction=float(peg["nominal_friction"]),
         ),
+        monte_carlo=MonteCarloConfig(
+            seed=int(monte_carlo["seed"]),
+            trials=int(monte_carlo["trials"]),
+            lateral_offset_limit_m=float(monte_carlo["lateral_offset_limit_m"]),
+            friction_scale_min=float(monte_carlo["friction_scale_min"]),
+            friction_scale_max=float(monte_carlo["friction_scale_max"]),
+            tool_mass_scale_min=float(monte_carlo["tool_mass_scale_min"]),
+            tool_mass_scale_max=float(monte_carlo["tool_mass_scale_max"]),
+        ),
         output=OutputConfig(
             root=str(output["root"]),
             save_csv=bool(output["save_csv"]),
@@ -170,6 +192,14 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         raise ValueError("model.variant must be either 'mvp' or 'menagerie'")
     if config.cartesian_position_controller.max_joint_velocity <= 0:
         raise ValueError("cartesian_position_controller.max_joint_velocity must be positive")
+    if config.monte_carlo.trials <= 0:
+        raise ValueError("monte_carlo.trials must be positive")
+    if config.monte_carlo.lateral_offset_limit_m <= 0:
+        raise ValueError("monte_carlo.lateral_offset_limit_m must be positive")
+    if config.monte_carlo.friction_scale_min > config.monte_carlo.friction_scale_max:
+        raise ValueError("monte_carlo friction scale bounds are reversed")
+    if config.monte_carlo.tool_mass_scale_min > config.monte_carlo.tool_mass_scale_max:
+        raise ValueError("monte_carlo tool mass scale bounds are reversed")
     times = (
         config.peg_task.approach_time,
         config.peg_task.align_time,

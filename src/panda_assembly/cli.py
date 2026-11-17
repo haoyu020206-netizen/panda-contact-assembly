@@ -11,6 +11,7 @@ from panda_assembly.experiments import (
     run_controller_comparison,
     run_controller_robustness_comparison,
     run_joint,
+    run_monte_carlo_comparison,
     run_peg,
     run_robustness_batch,
 )
@@ -23,7 +24,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "mode",
-        choices=("joint", "cartesian", "peg", "batch", "compare", "compare-batch"),
+        choices=(
+            "joint",
+            "cartesian",
+            "peg",
+            "batch",
+            "compare",
+            "compare-batch",
+            "monte-carlo",
+        ),
         help="Experiment to run.",
     )
     parser.add_argument("--config", type=Path, default=Path("configs/mvp.toml"))
@@ -62,6 +71,12 @@ def main() -> None:
             raise SystemExit("--viewer is not available for comparison batches")
         output = run_controller_robustness_comparison(config, args.output)
         print(json.dumps({"mode": "compare-batch", "output": str(output)}, indent=2))
+        return
+    if args.mode == "monte-carlo":
+        if args.viewer:
+            raise SystemExit("--viewer is not available for Monte Carlo runs")
+        output = run_monte_carlo_comparison(config, args.output)
+        print(json.dumps({"mode": "monte-carlo", "output": str(output)}, indent=2))
         return
 
     if args.mode == "joint":
