@@ -1,0 +1,38 @@
+{
+  "model_variant": "menagerie",
+  "task": "nominal_peg_insertion",
+  "controllers": {
+    "impedance": {
+      "mode": "peg",
+      "success": true,
+      "rms_position_error_m": 0.023676297062405816,
+      "max_position_error_m": 0.050998815919613055,
+      "max_contact_force_n": 56.755930124735954,
+      "completion_time_s": 7.851999999999357,
+      "rms_joint_error_rad": null,
+      "max_joint_error_rad": null,
+      "rms_orientation_error_rad": 0.0012680769155804066,
+      "max_orientation_error_rad": 0.002870634525266886,
+      "final_xy_error_m": 0.00021943028055079552,
+      "final_insertion_depth_m": 0.05799526933309784,
+      "controller": "impedance"
+    },
+    "position": {
+      "mode": "peg",
+      "success": true,
+      "rms_position_error_m": 0.011398142998277764,
+      "max_position_error_m": 0.02457498664339755,
+      "max_contact_force_n": 106.63344262219942,
+      "completion_time_s": 7.819999999999361,
+      "rms_joint_error_rad": null,
+      "max_joint_error_rad": null,
+      "rms_orientation_error_rad": 0.00038643301866973984,
+      "max_orientation_error_rad": 0.0008149336008281813,
+      "final_xy_error_m": 0.00024858502991195936,
+      "final_insertion_depth_m": 0.05813070009001697,
+      "controller": "position"
+    }
+  },
+  "position_minus_impedance_peak_force_n": 49.87751249746347,
+  "position_over_impedance_peak_force_ratio": 1.8788070671706838
+}
