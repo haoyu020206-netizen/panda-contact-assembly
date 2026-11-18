@@ -29,7 +29,12 @@ from panda_assembly.metrics import (
     total_contact_force,
 )
 from panda_assembly.model import load_model, reset_to_home
-from panda_assembly.safety import ForceSafetySupervisor, classify_peg_outcome
+from panda_assembly.safety import (
+    ForceSafetySupervisor,
+    InsertionSpeedLimiter,
+    SpiralRecoverySupervisor,
+    classify_peg_outcome,
+)
 from panda_assembly.trajectories import quintic_joint_trajectory
 
 
@@ -202,6 +207,11 @@ def _finish_run(
     safety_trigger_force: float | None = None,
     retraction_distance: float | None = None,
     safety_recovered: bool = False,
+    contact_recovery_triggered: bool = False,
+    jam_detected_time: float | None = None,
+    recovery_attempts: int = 0,
+    spiral_entry_detected: bool = False,
+    retry_success: bool = False,
 ) -> tuple[RunSummary, Path]:
     position_errors = log.position_errors()
     joint_errors = log.joint_errors()
@@ -236,6 +246,11 @@ def _finish_run(
         safety_trigger_force_n=safety_trigger_force,
         retraction_distance_m=retraction_distance,
         safety_recovered=safety_recovered,
+        contact_recovery_triggered=contact_recovery_triggered,
+        jam_detected_time_s=jam_detected_time,
+        recovery_attempts=recovery_attempts,
+        spiral_entry_detected=spiral_entry_detected,
+        retry_success=retry_success,
     )
     directory = _output_directory(config, mode, output)
     directory.mkdir(parents=True, exist_ok=True)
@@ -381,6 +396,7 @@ def run_peg(
     variation: Variation | None = None,
     controller_kind: str = "impedance",
     force_safety: bool = False,
+    contact_recovery: bool = False,
 ) -> tuple[RunSummary, Path]:
     variation = variation or Variation()
     model = load_model(timestep=config.simulation.timestep, variant=config.model.variant)
@@ -424,6 +440,40 @@ def run_peg(
     )
     final_target = aligned.copy()
     final_target[2] = commanded_hole_position[2] - peg.target_depth - vertical_tip_offset[2]
+    recovery_values = config.contact_recovery
+    speed_limiter = (
+        InsertionSpeedLimiter(
+            timestep_s=config.simulation.timestep,
+            precontact_distance_m=recovery_values.precontact_distance_m,
+            slow_zone_depth_m=recovery_values.slow_zone_depth_m,
+            free_speed_m_s=recovery_values.free_speed_m_s,
+            precontact_speed_m_s=recovery_values.precontact_speed_m_s,
+            contact_slow_force_n=recovery_values.contact_slow_force_n,
+            contact_speed_m_s=recovery_values.contact_speed_m_s,
+        )
+        if contact_recovery
+        else None
+    )
+    recovery_supervisor = (
+        SpiralRecoverySupervisor(
+            jam_force_n=recovery_values.jam_force_n,
+            jam_timeout_s=recovery_values.jam_timeout_s,
+            jam_progress_m=recovery_values.jam_progress_m,
+            retract_distance_m=recovery_values.retract_distance_m,
+            retract_duration_s=recovery_values.retract_duration_s,
+            spiral_radius_m=recovery_values.spiral_radius_m,
+            spiral_cycles=recovery_values.spiral_cycles,
+            spiral_duration_s=recovery_values.spiral_duration_s,
+            spiral_descent_m=recovery_values.spiral_descent_m,
+            entry_depth_m=recovery_values.entry_depth_m,
+            retry_insert_duration_s=recovery_values.retry_insert_duration_s,
+            max_retries=recovery_values.max_retries,
+            search_center=aligned.copy(),
+            final_target_z_m=float(final_target[2]),
+        )
+        if contact_recovery
+        else None
+    )
 
     def desired_position(sim_time: float) -> np.ndarray:
         if sim_time <= peg.approach_time:
@@ -444,8 +494,25 @@ def run_peg(
         nonlocal completion_time
         force = total_contact_force(model, data, peg_id)
         current_position, current_rotation = site_pose(model, data, ee_id)
+        tip_position, _ = site_pose(model, data, tip_id)
+        xy_error = float(np.linalg.norm(tip_position[:2] - hole_position[:2]))
+        depth = float(hole_position[2] - tip_position[2])
+        if completion_time is None and xy_error <= peg.clearance and depth >= peg.insertion_depth:
+            completion_time = sim_time
+
         target = desired_position(sim_time)
         target_rotation = desired_rotation(sim_time)
+        speed_state = "disabled"
+        recovery_state = "disabled"
+        if speed_limiter is not None:
+            target, speed_state = speed_limiter.command(
+                target,
+                tip_z_m=float(tip_position[2]),
+                hole_z_m=float(hole_position[2]),
+                contact_force_n=force,
+                insertion_active=sim_time > peg.align_time and completion_time is None,
+            )
+
         safety_state = "disabled"
         if supervisor is not None:
             just_triggered = supervisor.update(
@@ -456,6 +523,27 @@ def run_peg(
             )
             if just_triggered and isinstance(controller, CartesianPositionController):
                 controller.desired_joint_position[:] = data.qpos[:7]
+
+        if recovery_supervisor is not None and not (
+            supervisor is not None and supervisor.triggered
+        ):
+            jam_triggered = recovery_supervisor.update(
+                sim_time,
+                force,
+                depth,
+                completion_time is not None,
+                current_position,
+                current_rotation,
+            )
+            if jam_triggered and isinstance(controller, CartesianPositionController):
+                controller.desired_joint_position[:] = data.qpos[:7]
+            target, target_rotation, recovery_state = recovery_supervisor.command(
+                sim_time,
+                target,
+                target_rotation,
+            )
+
+        if supervisor is not None:
             target, target_rotation, safety_state = supervisor.command(
                 sim_time,
                 target,
@@ -469,16 +557,20 @@ def run_peg(
             force,
             data.qpos,
             orientation_error=error[3:],
-            safety_state=safety_state,
+            safety_state=(f"force:{safety_state}|speed:{speed_state}|recovery:{recovery_state}"),
         )
 
-        tip_position, _ = site_pose(model, data, tip_id)
-        xy_error = float(np.linalg.norm(tip_position[:2] - hole_position[:2]))
-        depth = float(hole_position[2] - tip_position[2])
-        if completion_time is None and xy_error <= peg.clearance and depth >= peg.insertion_depth:
-            completion_time = sim_time
-
     duration = max(config.simulation.duration, peg.settle_time)
+    if contact_recovery:
+        duration = max(
+            duration,
+            peg.settle_time
+            + recovery_values.jam_timeout_s
+            + recovery_values.retract_duration_s
+            + recovery_values.spiral_duration_s
+            + recovery_values.retry_insert_duration_s
+            + 2.0,
+        )
     _run_loop(model, data, duration, config.simulation.render_hz, step, viewer)
     final_tip, _ = site_pose(model, data, tip_id)
     final_xy_error = float(np.linalg.norm(final_tip[:2] - hole_position[:2]))
@@ -496,6 +588,10 @@ def run_peg(
         and retraction_distance is not None
         and retraction_distance >= safety.minimum_retraction_m
     )
+    contact_recovery_triggered = bool(
+        recovery_supervisor is not None and recovery_supervisor.triggered
+    )
+    retry_success = bool(recovery_supervisor is not None and recovery_supervisor.retry_success)
     geometric_success = completion_time is not None
     outcome, failure_type = classify_peg_outcome(
         geometric_success=geometric_success,
@@ -508,6 +604,8 @@ def run_peg(
         force_limit_n=safety.force_limit_n,
         safety_triggered=safety_triggered,
         safety_recovered=safety_recovered,
+        contact_recovery_triggered=contact_recovery_triggered,
+        retry_success=retry_success,
     )
     return _finish_run(
         config,
@@ -526,6 +624,15 @@ def run_peg(
         safety_trigger_force=(supervisor.trigger_force_n if supervisor is not None else None),
         retraction_distance=retraction_distance,
         safety_recovered=safety_recovered,
+        contact_recovery_triggered=contact_recovery_triggered,
+        jam_detected_time=(
+            recovery_supervisor.trigger_time_s if recovery_supervisor is not None else None
+        ),
+        recovery_attempts=(recovery_supervisor.attempts if recovery_supervisor is not None else 0),
+        spiral_entry_detected=(
+            recovery_supervisor.entry_detected if recovery_supervisor is not None else False
+        ),
+        retry_success=retry_success,
     )
 
 
@@ -1730,4 +1837,193 @@ def run_safety_recovery_comparison(config: ProjectConfig, output: Path | None = 
         json.dump(result, handle, indent=2)
     if config.output.save_plot:
         _save_safety_recovery_plot(rows, config, directory / "safety_recovery_summary.png")
+    return directory
+
+
+def _save_contact_recovery_plot(
+    rows: list[dict[str, object]], config: ProjectConfig, path: Path
+) -> bool:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    labels = [
+        f"{scenario_label}\n{controller}"
+        for scenario, scenario_label, _ in SAFETY_RECOVERY_SCENARIOS
+        for controller in ("impedance", "position")
+    ]
+    pairs = [
+        {
+            policy: next(
+                row
+                for row in rows
+                if row["scenario"] == scenario
+                and row["controller"] == controller
+                and row["policy"] == policy
+            )
+            for policy in ("unguarded", "layered")
+        }
+        for scenario, _, _ in SAFETY_RECOVERY_SCENARIOS
+        for controller in ("impedance", "position")
+    ]
+    indices = np.arange(len(pairs))
+    width = 0.36
+    colors = {"unguarded": "#b2182b", "layered": "#2166ac"}
+    figure, axes = plt.subplots(2, 2, figsize=(15, 9))
+
+    for offset, policy in ((-width / 2, "unguarded"), (width / 2, "layered")):
+        axes[0, 0].bar(
+            indices + offset,
+            [max(0.1, float(pair[policy]["max_contact_force_n"])) for pair in pairs],
+            width,
+            color=colors[policy],
+            label=policy,
+        )
+        axes[0, 1].bar(
+            indices + offset,
+            [int(bool(pair[policy]["success"])) for pair in pairs],
+            width,
+            color=colors[policy],
+            label=policy,
+        )
+
+    layered = [pair["layered"] for pair in pairs]
+    recovery_codes = [
+        3
+        if bool(row["retry_success"])
+        else 2
+        if bool(row["safety_recovered"])
+        else 1
+        if bool(row["contact_recovery_triggered"])
+        else 0
+        for row in layered
+    ]
+    recovery_colors = ["#bdbdbd", "#fdae61", "#2b8cbe", "#1b7837"]
+    axes[1, 0].bar(
+        indices, recovery_codes, color=[recovery_colors[value] for value in recovery_codes]
+    )
+
+    policies = ("unguarded", "layered")
+    counts = {
+        policy: Counter(str(row["outcome"]) for row in rows if row["policy"] == policy)
+        for policy in policies
+    }
+    outcomes = sorted({outcome for values in counts.values() for outcome in values})
+    outcome_indices = np.arange(len(outcomes))
+    for offset, policy in ((-width / 2, "unguarded"), (width / 2, "layered")):
+        axes[1, 1].bar(
+            outcome_indices + offset,
+            [counts[policy].get(outcome, 0) for outcome in outcomes],
+            width,
+            color=colors[policy],
+            label=policy,
+        )
+
+    axes[0, 0].axhline(
+        config.force_safety.force_limit_n,
+        color="#333333",
+        linestyle="--",
+        label=f"force abort ({config.force_safety.force_limit_n:g} N)",
+    )
+    axes[0, 0].set_yscale("log")
+    axes[0, 0].set_ylabel("Peak contact force [N]")
+    axes[0, 0].set_title("Peak load")
+    axes[0, 1].set_ylabel("Task success")
+    axes[0, 1].set_yticks([0, 1], labels=["fail", "pass"])
+    axes[0, 1].set_ylim(0.0, 1.15)
+    axes[0, 1].set_title("Insertion result")
+    axes[1, 0].set_ylabel("Recovery result")
+    axes[1, 0].set_yticks(
+        [0, 1, 2, 3],
+        labels=["none", "spiral failed", "force retreat", "spiral retry success"],
+    )
+    axes[1, 0].set_ylim(0.0, 3.3)
+    axes[1, 0].set_title("Layered recovery path")
+    axes[1, 1].set_ylabel("Trials")
+    axes[1, 1].set_title("Outcome taxonomy")
+    axes[1, 1].set_xticks(outcome_indices, labels=outcomes, rotation=25, ha="right")
+
+    for axis in (axes[0, 0], axes[0, 1], axes[1, 0]):
+        axis.set_xticks(indices, labels=labels, rotation=25, ha="right")
+    for axis in axes.flat:
+        axis.grid(axis="y", alpha=0.25)
+        if axis is not axes[1, 0]:
+            axis.legend(fontsize=8)
+    figure.tight_layout()
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+    return True
+
+
+def run_contact_recovery_comparison(config: ProjectConfig, output: Path | None = None) -> Path:
+    """Evaluate speed limiting, jam detection, spiral search, and force retreat together."""
+    directory = _output_directory(config, "contact_recovery", output)
+    directory.mkdir(parents=True, exist_ok=True)
+    trial_config = replace(config, output=replace(config.output, save_plot=False))
+    rows: list[dict[str, object]] = []
+    for scenario, scenario_label, variation in SAFETY_RECOVERY_SCENARIOS:
+        for controller_kind in ("impedance", "position"):
+            for policy, layered in (("unguarded", False), ("layered", True)):
+                summary, _ = run_peg(
+                    trial_config,
+                    viewer=False,
+                    output=directory / scenario / controller_kind / policy,
+                    variation=variation,
+                    controller_kind=controller_kind,
+                    force_safety=layered,
+                    contact_recovery=layered,
+                )
+                rows.append(
+                    {
+                        "scenario": scenario,
+                        "scenario_label": scenario_label,
+                        "policy": policy,
+                        **asdict(variation),
+                        **asdict(summary),
+                    }
+                )
+
+    with (directory / "contact_recovery_trials.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    layered_rows = [row for row in rows if row["policy"] == "layered"]
+    result = {
+        "model_variant": config.model.variant,
+        "force_safety": asdict(config.force_safety),
+        "contact_recovery": asdict(config.contact_recovery),
+        "force_limits_are_exploratory": True,
+        "policies": {
+            "unguarded": "original time-parameterized insertion without recovery",
+            "layered": (
+                "axial speed limiting, low-force jam timeout, local retract and spiral retry, "
+                "plus high-force stop and retreat"
+            ),
+        },
+        "aggregates": {
+            "evaluations": len(rows),
+            "layered_successes": sum(bool(row["success"]) for row in layered_rows),
+            "layered_force_recoveries": sum(bool(row["safety_recovered"]) for row in layered_rows),
+            "layered_jam_detections": sum(
+                bool(row["contact_recovery_triggered"]) for row in layered_rows
+            ),
+            "layered_spiral_entries": sum(
+                bool(row["spiral_entry_detected"]) for row in layered_rows
+            ),
+            "layered_retry_successes": sum(bool(row["retry_success"]) for row in layered_rows),
+            "unguarded_outcomes": dict(
+                Counter(str(row["outcome"]) for row in rows if row["policy"] == "unguarded")
+            ),
+            "layered_outcomes": dict(Counter(str(row["outcome"]) for row in layered_rows)),
+        },
+        "trials": rows,
+    }
+    with (directory / "contact_recovery_summary.json").open("w", encoding="utf-8") as handle:
+        json.dump(result, handle, indent=2)
+    if config.output.save_plot:
+        _save_contact_recovery_plot(rows, config, directory / "contact_recovery_summary.png")
     return directory

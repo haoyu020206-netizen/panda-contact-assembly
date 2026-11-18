@@ -89,6 +89,9 @@ jobs:
           python -m panda_assembly safety-recovery \
             --config configs/menagerie.toml \
             --output showcase-results/safety-recovery
+          python -m panda_assembly contact-recovery \
+            --config configs/menagerie.toml \
+            --output showcase-results/contact-recovery
 
       - name: Render verified final scene
         env:
