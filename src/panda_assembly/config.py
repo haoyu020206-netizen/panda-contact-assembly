@@ -120,6 +120,18 @@ class ContactRecoveryConfig:
 
 
 @dataclass(frozen=True)
+class PredictiveImpactConfig:
+    distance_cutoff_m: float
+    slowdown_distance_m: float
+    trigger_distance_m: float
+    minimum_closing_speed_m_s: float
+    probe_speed_m_s: float
+    force_rate_limit_n_s: float
+    force_rate_min_force_n: float
+    lateral_speed_limit_m_s: float
+
+
+@dataclass(frozen=True)
 class OutputConfig:
     root: str
     save_csv: bool
@@ -139,6 +151,7 @@ class ProjectConfig:
     boundary_refinement: BoundaryRefinementConfig
     force_safety: ForceSafetyConfig
     contact_recovery: ContactRecoveryConfig
+    predictive_impact: PredictiveImpactConfig
     output: OutputConfig
 
 
@@ -161,6 +174,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     boundary_refinement = raw["boundary_refinement"]
     force_safety = raw["force_safety"]
     contact_recovery = raw["contact_recovery"]
+    predictive_impact = raw["predictive_impact"]
     output = raw["output"]
 
     config = ProjectConfig(
@@ -274,6 +288,16 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             retry_insert_duration_s=float(contact_recovery["retry_insert_duration_s"]),
             max_retries=int(contact_recovery["max_retries"]),
         ),
+        predictive_impact=PredictiveImpactConfig(
+            distance_cutoff_m=float(predictive_impact["distance_cutoff_m"]),
+            slowdown_distance_m=float(predictive_impact["slowdown_distance_m"]),
+            trigger_distance_m=float(predictive_impact["trigger_distance_m"]),
+            minimum_closing_speed_m_s=float(predictive_impact["minimum_closing_speed_m_s"]),
+            probe_speed_m_s=float(predictive_impact["probe_speed_m_s"]),
+            force_rate_limit_n_s=float(predictive_impact["force_rate_limit_n_s"]),
+            force_rate_min_force_n=float(predictive_impact["force_rate_min_force_n"]),
+            lateral_speed_limit_m_s=float(predictive_impact["lateral_speed_limit_m_s"]),
+        ),
         output=OutputConfig(
             root=str(output["root"]),
             save_csv=bool(output["save_csv"]),
@@ -345,6 +369,29 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         raise ValueError("contact_recovery.jam_force_n must be below force_safety.force_limit_n")
     if recovery.spiral_cycles <= 0 or recovery.max_retries <= 0:
         raise ValueError("contact_recovery cycles and retries must be positive")
+    predictive = config.predictive_impact
+    positive_predictive_values = (
+        predictive.distance_cutoff_m,
+        predictive.slowdown_distance_m,
+        predictive.trigger_distance_m,
+        predictive.minimum_closing_speed_m_s,
+        predictive.probe_speed_m_s,
+        predictive.force_rate_limit_n_s,
+        predictive.force_rate_min_force_n,
+        predictive.lateral_speed_limit_m_s,
+    )
+    if any(value <= 0 for value in positive_predictive_values):
+        raise ValueError("predictive_impact values must be positive")
+    if not (
+        predictive.trigger_distance_m
+        <= predictive.slowdown_distance_m
+        < predictive.distance_cutoff_m
+    ):
+        raise ValueError("predictive_impact distances must satisfy trigger <= slowdown < cutoff")
+    if predictive.probe_speed_m_s > recovery.precontact_speed_m_s:
+        raise ValueError("predictive_impact.probe_speed_m_s cannot exceed precontact speed")
+    if predictive.force_rate_min_force_n >= safety.force_limit_n:
+        raise ValueError("predictive force-rate threshold must be below force safety limit")
     times = (
         config.peg_task.approach_time,
         config.peg_task.align_time,

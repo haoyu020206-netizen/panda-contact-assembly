@@ -24,3 +24,5 @@ def test_loads_mvp_config() -> None:
     assert config.force_safety.retract_distance_m == pytest.approx(0.080)
     assert config.contact_recovery.spiral_radius_m == pytest.approx(0.008)
     assert config.contact_recovery.spiral_cycles == 4
+    assert config.predictive_impact.trigger_distance_m == pytest.approx(0.002)
+    assert config.predictive_impact.lateral_speed_limit_m_s == pytest.approx(0.020)

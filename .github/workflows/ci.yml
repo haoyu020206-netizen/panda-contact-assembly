@@ -92,6 +92,9 @@ jobs:
           python -m panda_assembly contact-recovery \
             --config configs/menagerie.toml \
             --output showcase-results/contact-recovery
+          python -m panda_assembly predictive-impact \
+            --config configs/menagerie.toml \
+            --output showcase-results/predictive-impact
 
       - name: Render verified final scene
         env:

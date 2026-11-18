@@ -40,6 +40,12 @@ class RunSummary:
     recovery_attempts: int = 0
     spiral_entry_detected: bool = False
     retry_success: bool = False
+    predictive_guard_triggered: bool = False
+    predictive_trigger_time_s: float | None = None
+    predictive_trigger_reason: str | None = None
+    predictive_trigger_distance_m: float | None = None
+    minimum_proximity_distance_m: float | None = None
+    max_force_rate_n_s: float | None = None
 
 
 class RunLog:
@@ -55,6 +61,9 @@ class RunLog:
         joint_error: FloatArray | None = None,
         orientation_error: FloatArray | None = None,
         safety_state: str | None = None,
+        proximity_distance: float | None = None,
+        closing_speed: float | None = None,
+        force_rate: float | None = None,
     ) -> None:
         row: dict[str, float | str | None] = {
             "time_s": float(time),
@@ -70,6 +79,9 @@ class RunLog:
             ),
             "contact_force_n": float(contact_force),
             "safety_state": safety_state,
+            "proximity_distance_m": proximity_distance,
+            "closing_speed_m_s": closing_speed,
+            "force_rate_n_s": force_rate,
         }
         if position_error is not None:
             row.update(
@@ -139,6 +151,29 @@ def total_contact_force(model: mujoco.MjModel, data: mujoco.MjData, geom_id: int
         mujoco.mj_contactForce(model, data, index, force)
         total += float(np.linalg.norm(force[:3]))
     return total
+
+
+def minimum_geom_distance(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    source_geom_id: int,
+    target_geom_ids: tuple[int, ...],
+    cutoff_m: float,
+) -> float:
+    """Return the smallest signed source-to-target collision-geometry distance."""
+    minimum = cutoff_m
+    from_to = np.zeros(6)
+    for target_geom_id in target_geom_ids:
+        distance = mujoco.mj_geomDistance(
+            model,
+            data,
+            source_geom_id,
+            target_geom_id,
+            cutoff_m,
+            from_to,
+        )
+        minimum = min(minimum, float(distance))
+    return minimum
 
 
 def save_summary(summary: RunSummary, path: Path) -> None:

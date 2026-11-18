@@ -106,6 +106,7 @@ class InsertionSpeedLimiter:
         hole_z_m: float,
         contact_force_n: float,
         insertion_active: bool,
+        speed_cap_m_s: float | None = None,
     ) -> tuple[FloatArray, str]:
         if not insertion_active:
             self.commanded_z_m = float(nominal_position[2])
@@ -122,6 +123,9 @@ class InsertionSpeedLimiter:
         if contact_force_n >= self.contact_slow_force_n:
             speed = self.contact_speed_m_s
             state = "contact_slow"
+        if speed_cap_m_s is not None and speed_cap_m_s < speed:
+            speed = speed_cap_m_s
+            state = "proximity_probe"
 
         self.commanded_z_m = max(
             float(nominal_position[2]),
@@ -129,6 +133,130 @@ class InsertionSpeedLimiter:
         )
         target = nominal_position.copy()
         target[2] = self.commanded_z_m
+        return target, state
+
+
+@dataclass
+class PredictiveImpactGuard:
+    """Use proximity and force slope to trigger recovery before a large impact."""
+
+    timestep_s: float
+    slowdown_distance_m: float
+    trigger_distance_m: float
+    minimum_closing_speed_m_s: float
+    probe_speed_m_s: float
+    force_rate_limit_n_s: float
+    force_rate_min_force_n: float
+    previous_distance_m: float | None = None
+    previous_force_n: float = 0.0
+    last_distance_m: float | None = None
+    last_closing_speed_m_s: float = 0.0
+    last_force_rate_n_s: float = 0.0
+    minimum_distance_m: float | None = None
+    maximum_force_rate_n_s: float = 0.0
+    trigger_time_s: float | None = None
+    trigger_reason: str | None = None
+    triggered_at_distance_m: float | None = None
+    triggered_at_closing_speed_m_s: float | None = None
+    triggered_at_force_rate_n_s: float | None = None
+
+    @property
+    def triggered(self) -> bool:
+        return self.trigger_time_s is not None
+
+    @property
+    def slowing(self) -> bool:
+        return self.last_distance_m is not None and self.last_distance_m <= self.slowdown_distance_m
+
+    @property
+    def speed_cap_m_s(self) -> float | None:
+        return self.probe_speed_m_s if self.slowing else None
+
+    @property
+    def state_name(self) -> str:
+        if self.triggered:
+            return f"triggered_{self.trigger_reason}"
+        if self.slowing:
+            return "proximity_slow"
+        return "monitoring"
+
+    def update(
+        self,
+        sim_time: float,
+        proximity_distance_m: float,
+        contact_force_n: float,
+        active: bool,
+    ) -> bool:
+        closing_speed = 0.0
+        if self.previous_distance_m is not None:
+            closing_speed = max(
+                0.0,
+                (self.previous_distance_m - proximity_distance_m) / self.timestep_s,
+            )
+        force_rate = max(0.0, (contact_force_n - self.previous_force_n) / self.timestep_s)
+        self.previous_distance_m = proximity_distance_m
+        self.previous_force_n = contact_force_n
+        self.last_distance_m = proximity_distance_m
+        self.last_closing_speed_m_s = closing_speed
+        self.last_force_rate_n_s = force_rate
+
+        if active:
+            if self.minimum_distance_m is None:
+                self.minimum_distance_m = proximity_distance_m
+            else:
+                self.minimum_distance_m = min(self.minimum_distance_m, proximity_distance_m)
+            self.maximum_force_rate_n_s = max(self.maximum_force_rate_n_s, force_rate)
+        if not active or self.triggered:
+            return False
+
+        reason = None
+        if (
+            proximity_distance_m <= self.trigger_distance_m
+            and closing_speed >= self.minimum_closing_speed_m_s
+        ):
+            reason = "proximity"
+        elif (
+            contact_force_n >= self.force_rate_min_force_n
+            and force_rate >= self.force_rate_limit_n_s
+        ):
+            reason = "force_rate"
+        if reason is None:
+            return False
+
+        self.trigger_time_s = sim_time
+        self.trigger_reason = reason
+        self.triggered_at_distance_m = proximity_distance_m
+        self.triggered_at_closing_speed_m_s = closing_speed
+        self.triggered_at_force_rate_n_s = force_rate
+        return True
+
+
+@dataclass
+class LateralCommandLimiter:
+    """Rate-limit recovery XY commands without changing their geometric path."""
+
+    timestep_s: float
+    speed_limit_m_s: float
+    commanded_xy_m: FloatArray | None = None
+
+    def command(self, nominal_position: FloatArray, enabled: bool) -> tuple[FloatArray, str]:
+        if self.commanded_xy_m is None:
+            self.commanded_xy_m = nominal_position[:2].copy()
+        if not enabled:
+            self.commanded_xy_m = nominal_position[:2].copy()
+            return nominal_position, "free"
+
+        delta = nominal_position[:2] - self.commanded_xy_m
+        distance = float(np.linalg.norm(delta))
+        maximum_step = self.speed_limit_m_s * self.timestep_s
+        state = "tracking"
+        if distance > maximum_step:
+            self.commanded_xy_m += delta * (maximum_step / distance)
+            state = "limited"
+        else:
+            self.commanded_xy_m = nominal_position[:2].copy()
+        target = nominal_position.copy()
+        target[:2] = self.commanded_xy_m
         return target, state
 
 
@@ -185,6 +313,18 @@ class SpiralRecoverySupervisor:
         self.jam_window_start_s = None
         self.jam_reference_depth_m = None
 
+    def trigger_recovery(
+        self,
+        sim_time: float,
+        current_position: FloatArray,
+        current_rotation: FloatArray,
+    ) -> bool:
+        """Begin recovery from an external predictive trigger if a retry is available."""
+        if self.state_name != "monitoring" or self.attempts >= self.max_retries:
+            return False
+        self._begin_recovery(sim_time, current_position, current_rotation)
+        return True
+
     def update(
         self,
         sim_time: float,
@@ -212,8 +352,7 @@ class SpiralRecoverySupervisor:
                 sim_time - self.jam_window_start_s >= self.jam_timeout_s
                 and self.attempts < self.max_retries
             ):
-                self._begin_recovery(sim_time, current_position, current_rotation)
-                return True
+                return self.trigger_recovery(sim_time, current_position, current_rotation)
             return False
 
         if self.state_name == "local_retract":

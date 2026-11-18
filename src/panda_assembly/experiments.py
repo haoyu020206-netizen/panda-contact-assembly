@@ -24,6 +24,7 @@ from panda_assembly.math_utils import interpolate_rotation, smoothstep, vertical
 from panda_assembly.metrics import (
     RunLog,
     RunSummary,
+    minimum_geom_distance,
     save_plot,
     save_summary,
     total_contact_force,
@@ -32,6 +33,8 @@ from panda_assembly.model import load_model, reset_to_home
 from panda_assembly.safety import (
     ForceSafetySupervisor,
     InsertionSpeedLimiter,
+    LateralCommandLimiter,
+    PredictiveImpactGuard,
     SpiralRecoverySupervisor,
     classify_peg_outcome,
 )
@@ -212,6 +215,12 @@ def _finish_run(
     recovery_attempts: int = 0,
     spiral_entry_detected: bool = False,
     retry_success: bool = False,
+    predictive_guard_triggered: bool = False,
+    predictive_trigger_time: float | None = None,
+    predictive_trigger_reason: str | None = None,
+    predictive_trigger_distance: float | None = None,
+    minimum_proximity_distance: float | None = None,
+    max_force_rate: float | None = None,
 ) -> tuple[RunSummary, Path]:
     position_errors = log.position_errors()
     joint_errors = log.joint_errors()
@@ -251,6 +260,12 @@ def _finish_run(
         recovery_attempts=recovery_attempts,
         spiral_entry_detected=spiral_entry_detected,
         retry_success=retry_success,
+        predictive_guard_triggered=predictive_guard_triggered,
+        predictive_trigger_time_s=predictive_trigger_time,
+        predictive_trigger_reason=predictive_trigger_reason,
+        predictive_trigger_distance_m=predictive_trigger_distance,
+        minimum_proximity_distance_m=minimum_proximity_distance,
+        max_force_rate_n_s=max_force_rate,
     )
     directory = _output_directory(config, mode, output)
     directory.mkdir(parents=True, exist_ok=True)
@@ -397,6 +412,7 @@ def run_peg(
     controller_kind: str = "impedance",
     force_safety: bool = False,
     contact_recovery: bool = False,
+    predictive_impact: bool = False,
 ) -> tuple[RunSummary, Path]:
     variation = variation or Variation()
     model = load_model(timestep=config.simulation.timestep, variant=config.model.variant)
@@ -411,6 +427,16 @@ def run_peg(
     commanded_hole_position[0] -= variation.lateral_offset_x
     commanded_hole_position[1] -= variation.lateral_offset_y
     tip_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "peg_tip")
+    socket_geom_ids = tuple(
+        mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
+        for name in (
+            "socket_base",
+            "socket_x_pos",
+            "socket_x_neg",
+            "socket_y_pos",
+            "socket_y_neg",
+        )
+    )
     vertical_rotation = vertical_tool_frame(start_rotation)
     tip_offset_local = _site_offset_in_frame(model, data, ee_id, tip_id)
     vertical_tip_offset = vertical_rotation @ tip_offset_local
@@ -474,6 +500,28 @@ def run_peg(
         if contact_recovery
         else None
     )
+    predictive_values = config.predictive_impact
+    predictive_guard = (
+        PredictiveImpactGuard(
+            timestep_s=config.simulation.timestep,
+            slowdown_distance_m=predictive_values.slowdown_distance_m,
+            trigger_distance_m=predictive_values.trigger_distance_m,
+            minimum_closing_speed_m_s=predictive_values.minimum_closing_speed_m_s,
+            probe_speed_m_s=predictive_values.probe_speed_m_s,
+            force_rate_limit_n_s=predictive_values.force_rate_limit_n_s,
+            force_rate_min_force_n=predictive_values.force_rate_min_force_n,
+        )
+        if predictive_impact
+        else None
+    )
+    lateral_limiter = (
+        LateralCommandLimiter(
+            timestep_s=config.simulation.timestep,
+            speed_limit_m_s=predictive_values.lateral_speed_limit_m_s,
+        )
+        if predictive_impact
+        else None
+    )
 
     def desired_position(sim_time: float) -> np.ndarray:
         if sim_time <= peg.approach_time:
@@ -502,6 +550,31 @@ def run_peg(
 
         target = desired_position(sim_time)
         target_rotation = desired_rotation(sim_time)
+        insertion_active = sim_time > peg.align_time and completion_time is None
+        proximity_distance = None
+        predictive_triggered_now = False
+        predictive_state = "disabled"
+        if predictive_guard is not None:
+            proximity_distance = minimum_geom_distance(
+                model,
+                data,
+                peg_id,
+                socket_geom_ids,
+                predictive_values.distance_cutoff_m,
+            )
+            prediction_active = bool(
+                insertion_active
+                and recovery_supervisor is not None
+                and recovery_supervisor.state_name == "monitoring"
+                and not (supervisor is not None and supervisor.triggered)
+            )
+            predictive_triggered_now = predictive_guard.update(
+                sim_time,
+                proximity_distance,
+                force,
+                prediction_active,
+            )
+            predictive_state = predictive_guard.state_name
         speed_state = "disabled"
         recovery_state = "disabled"
         if speed_limiter is not None:
@@ -510,7 +583,10 @@ def run_peg(
                 tip_z_m=float(tip_position[2]),
                 hole_z_m=float(hole_position[2]),
                 contact_force_n=force,
-                insertion_active=sim_time > peg.align_time and completion_time is None,
+                insertion_active=insertion_active,
+                speed_cap_m_s=(
+                    predictive_guard.speed_cap_m_s if predictive_guard is not None else None
+                ),
             )
 
         safety_state = "disabled"
@@ -527,6 +603,13 @@ def run_peg(
         if recovery_supervisor is not None and not (
             supervisor is not None and supervisor.triggered
         ):
+            predictive_recovery = False
+            if predictive_triggered_now:
+                predictive_recovery = recovery_supervisor.trigger_recovery(
+                    sim_time,
+                    current_position,
+                    current_rotation,
+                )
             jam_triggered = recovery_supervisor.update(
                 sim_time,
                 force,
@@ -535,12 +618,21 @@ def run_peg(
                 current_position,
                 current_rotation,
             )
-            if jam_triggered and isinstance(controller, CartesianPositionController):
+            if (predictive_recovery or jam_triggered) and isinstance(
+                controller, CartesianPositionController
+            ):
                 controller.desired_joint_position[:] = data.qpos[:7]
             target, target_rotation, recovery_state = recovery_supervisor.command(
                 sim_time,
                 target,
                 target_rotation,
+            )
+
+        lateral_state = "disabled"
+        if lateral_limiter is not None:
+            target, lateral_state = lateral_limiter.command(
+                target,
+                recovery_state in {"spiral_search", "retry_insert"},
             )
 
         if supervisor is not None:
@@ -557,7 +649,17 @@ def run_peg(
             force,
             data.qpos,
             orientation_error=error[3:],
-            safety_state=(f"force:{safety_state}|speed:{speed_state}|recovery:{recovery_state}"),
+            safety_state=(
+                f"force:{safety_state}|speed:{speed_state}|predictive:{predictive_state}"
+                f"|recovery:{recovery_state}|lateral:{lateral_state}"
+            ),
+            proximity_distance=proximity_distance,
+            closing_speed=(
+                predictive_guard.last_closing_speed_m_s if predictive_guard is not None else None
+            ),
+            force_rate=(
+                predictive_guard.last_force_rate_n_s if predictive_guard is not None else None
+            ),
         )
 
     duration = max(config.simulation.duration, peg.settle_time)
@@ -571,6 +673,8 @@ def run_peg(
             + recovery_values.retry_insert_duration_s
             + 2.0,
         )
+    if predictive_impact:
+        duration += 4.0
     _run_loop(model, data, duration, config.simulation.render_hz, step, viewer)
     final_tip, _ = site_pose(model, data, tip_id)
     final_xy_error = float(np.linalg.norm(final_tip[:2] - hole_position[:2]))
@@ -633,6 +737,24 @@ def run_peg(
             recovery_supervisor.entry_detected if recovery_supervisor is not None else False
         ),
         retry_success=retry_success,
+        predictive_guard_triggered=bool(
+            predictive_guard is not None and predictive_guard.triggered
+        ),
+        predictive_trigger_time=(
+            predictive_guard.trigger_time_s if predictive_guard is not None else None
+        ),
+        predictive_trigger_reason=(
+            predictive_guard.trigger_reason if predictive_guard is not None else None
+        ),
+        predictive_trigger_distance=(
+            predictive_guard.triggered_at_distance_m if predictive_guard is not None else None
+        ),
+        minimum_proximity_distance=(
+            predictive_guard.minimum_distance_m if predictive_guard is not None else None
+        ),
+        max_force_rate=(
+            predictive_guard.maximum_force_rate_n_s if predictive_guard is not None else None
+        ),
     )
 
 
@@ -2078,4 +2200,233 @@ def run_contact_recovery_comparison(config: ProjectConfig, output: Path | None =
         json.dump(result, handle, indent=2)
     if config.output.save_plot:
         _save_contact_recovery_plot(rows, config, directory / "contact_recovery_summary.png")
+    return directory
+
+
+def _predictive_impact_acceptance(
+    rows: list[dict[str, object]], config: ProjectConfig
+) -> dict[str, object]:
+    expected_keys = {
+        (scenario, controller, policy)
+        for scenario, _, _ in SAFETY_RECOVERY_SCENARIOS
+        for controller in ("impedance", "position")
+        for policy in ("reactive", "predictive")
+    }
+    keyed = {
+        (str(row["scenario"]), str(row["controller"]), str(row["policy"])): row for row in rows
+    }
+    predictive = [row for row in rows if row["policy"] == "predictive"]
+    nominal = [row for row in predictive if row["scenario"] == "nominal"]
+    hazards = [row for row in predictive if row["scenario"] != "nominal"]
+    reactive_diagonal = keyed.get(("xy_plus_8mm", "impedance", "reactive"))
+    predictive_diagonal = keyed.get(("xy_plus_8mm", "impedance", "predictive"))
+    predictive_jam = keyed.get(("x_plus_6mm", "impedance", "predictive"))
+    safety_aborts = [row for row in predictive if bool(row["safety_triggered"])]
+    unresolved = {"unsafe_completion", "excessive_force", "jammed", "recovery_failed"}
+    checks = {
+        "complete_matrix": set(keyed) == expected_keys and len(rows) == len(expected_keys),
+        "nominal_success_preserved": len(nominal) == 2
+        and all(bool(row["success"]) for row in nominal),
+        "no_nominal_predictive_trigger": len(nominal) == 2
+        and not any(bool(row["predictive_guard_triggered"]) for row in nominal),
+        "hazard_prediction_exercised": any(
+            bool(row["predictive_guard_triggered"]) for row in hazards
+        ),
+        "known_jam_remains_recoverable": predictive_jam is not None
+        and bool(predictive_jam["success"]),
+        "diagonal_impedance_peak_reduced": reactive_diagonal is not None
+        and predictive_diagonal is not None
+        and float(predictive_diagonal["max_contact_force_n"])
+        < float(reactive_diagonal["max_contact_force_n"]),
+        "all_predictive_safety_aborts_recover": all(
+            bool(row["safety_recovered"])
+            and float(row["final_contact_force_n"]) <= config.force_safety.release_force_n
+            for row in safety_aborts
+        ),
+        "no_unresolved_predictive_outcome": not any(
+            str(row["outcome"]) in unresolved for row in predictive
+        ),
+    }
+    return {"passed": all(checks.values()), "checks": checks}
+
+
+def _save_predictive_impact_plot(
+    rows: list[dict[str, object]], config: ProjectConfig, path: Path
+) -> bool:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    pairs = []
+    labels = []
+    for scenario, scenario_label, _ in SAFETY_RECOVERY_SCENARIOS:
+        for controller in ("impedance", "position"):
+            pairs.append(
+                {
+                    policy: next(
+                        row
+                        for row in rows
+                        if row["scenario"] == scenario
+                        and row["controller"] == controller
+                        and row["policy"] == policy
+                    )
+                    for policy in ("reactive", "predictive")
+                }
+            )
+            labels.append(f"{scenario_label}\n{controller}")
+
+    figure, axes = plt.subplots(2, 2, figsize=(13, 8))
+    indices = np.arange(len(pairs))
+    width = 0.36
+    colors = {"reactive": "#b2182b", "predictive": "#2166ac"}
+    for offset, policy in ((-width / 2, "reactive"), (width / 2, "predictive")):
+        axes[0, 0].bar(
+            indices + offset,
+            [max(0.1, float(pair[policy]["max_contact_force_n"])) for pair in pairs],
+            width,
+            color=colors[policy],
+            label=policy,
+        )
+        axes[0, 1].bar(
+            indices + offset,
+            [int(bool(pair[policy]["success"])) for pair in pairs],
+            width,
+            color=colors[policy],
+            label=policy,
+        )
+
+    predictive_rows = [pair["predictive"] for pair in pairs]
+    trigger_distances = [
+        (
+            1000.0 * float(row["predictive_trigger_distance_m"])
+            if row["predictive_trigger_distance_m"] is not None
+            else 0.0
+        )
+        for row in predictive_rows
+    ]
+    axes[1, 0].bar(
+        indices,
+        trigger_distances,
+        color=[
+            "#2b8cbe" if bool(row["predictive_guard_triggered"]) else "#bdbdbd"
+            for row in predictive_rows
+        ],
+    )
+
+    counts = {
+        policy: Counter(str(row["outcome"]) for row in rows if row["policy"] == policy)
+        for policy in ("reactive", "predictive")
+    }
+    outcomes = sorted({outcome for values in counts.values() for outcome in values})
+    outcome_indices = np.arange(len(outcomes))
+    for offset, policy in ((-width / 2, "reactive"), (width / 2, "predictive")):
+        axes[1, 1].bar(
+            outcome_indices + offset,
+            [counts[policy].get(outcome, 0) for outcome in outcomes],
+            width,
+            color=colors[policy],
+            label=policy,
+        )
+
+    axes[0, 0].axhline(
+        config.force_safety.force_limit_n,
+        color="#333333",
+        linestyle="--",
+        label=f"force abort ({config.force_safety.force_limit_n:g} N)",
+    )
+    axes[0, 0].set_yscale("log")
+    axes[0, 0].set_ylabel("Peak contact force [N]")
+    axes[0, 0].set_title("Reactive vs predictive peak load")
+    axes[0, 1].set_ylabel("Task success")
+    axes[0, 1].set_yticks([0, 1], labels=["fail", "pass"])
+    axes[0, 1].set_ylim(0.0, 1.15)
+    axes[0, 1].set_title("Insertion result")
+    axes[1, 0].axhline(
+        1000.0 * config.predictive_impact.trigger_distance_m,
+        color="#333333",
+        linestyle="--",
+        label="configured distance trigger",
+    )
+    axes[1, 0].set_ylabel("Trigger distance [mm]")
+    axes[1, 0].set_title("Predictive intervention")
+    axes[1, 1].set_ylabel("Trials")
+    axes[1, 1].set_title("Outcome taxonomy")
+    axes[1, 1].set_xticks(outcome_indices, labels=outcomes, rotation=25, ha="right")
+
+    for axis in (axes[0, 0], axes[0, 1], axes[1, 0]):
+        axis.set_xticks(indices, labels=labels, rotation=25, ha="right")
+    for axis in axes.flat:
+        axis.grid(axis="y", alpha=0.25)
+        axis.legend(fontsize=8)
+    figure.tight_layout()
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+    return True
+
+
+def run_predictive_impact_comparison(config: ProjectConfig, output: Path | None = None) -> Path:
+    """Compare reactive recovery with proximity- and force-rate-triggered intervention."""
+    directory = _output_directory(config, "predictive_impact", output)
+    directory.mkdir(parents=True, exist_ok=True)
+    trial_config = replace(config, output=replace(config.output, save_plot=False))
+    rows: list[dict[str, object]] = []
+    for scenario, scenario_label, variation in SAFETY_RECOVERY_SCENARIOS:
+        for controller_kind in ("impedance", "position"):
+            for policy, predictive in (("reactive", False), ("predictive", True)):
+                summary, _ = run_peg(
+                    trial_config,
+                    viewer=False,
+                    output=directory / scenario / controller_kind / policy,
+                    variation=variation,
+                    controller_kind=controller_kind,
+                    force_safety=True,
+                    contact_recovery=True,
+                    predictive_impact=predictive,
+                )
+                rows.append(
+                    {
+                        "scenario": scenario,
+                        "scenario_label": scenario_label,
+                        "policy": policy,
+                        **asdict(variation),
+                        **asdict(summary),
+                    }
+                )
+
+    with (directory / "predictive_impact_trials.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    predictive_rows = [row for row in rows if row["policy"] == "predictive"]
+    result = {
+        "model_variant": config.model.variant,
+        "force_safety": asdict(config.force_safety),
+        "contact_recovery": asdict(config.contact_recovery),
+        "predictive_impact": asdict(config.predictive_impact),
+        "simulation_only_proximity_signal": True,
+        "acceptance": _predictive_impact_acceptance(rows, config),
+        "aggregates": {
+            "evaluations": len(rows),
+            "predictive_triggers": sum(
+                bool(row["predictive_guard_triggered"]) for row in predictive_rows
+            ),
+            "predictive_successes": sum(bool(row["success"]) for row in predictive_rows),
+            "predictive_safety_recoveries": sum(
+                bool(row["safety_recovered"]) for row in predictive_rows
+            ),
+            "reactive_outcomes": dict(
+                Counter(str(row["outcome"]) for row in rows if row["policy"] == "reactive")
+            ),
+            "predictive_outcomes": dict(Counter(str(row["outcome"]) for row in predictive_rows)),
+        },
+        "trials": rows,
+    }
+    with (directory / "predictive_impact_summary.json").open("w", encoding="utf-8") as handle:
+        json.dump(result, handle, indent=2)
+    if config.output.save_plot:
+        _save_predictive_impact_plot(rows, config, directory / "predictive_impact_summary.png")
     return directory
