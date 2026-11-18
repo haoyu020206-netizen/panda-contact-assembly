@@ -260,6 +260,15 @@ def test_spiral_recovery_detects_jam_searches_and_retries() -> None:
             },
             ("recovery_failed", "jammed"),
         ),
+        (
+            {
+                "geometric_success": False,
+                "contact_recovery_triggered": True,
+                "predictive_guard_triggered": True,
+                "recovery_safe_retreat": True,
+            },
+            ("safe_reject", "recovery_envelope_exceeded"),
+        ),
     ],
 )
 def test_classify_peg_outcome(values: dict[str, object], expected: tuple[str, str | None]) -> None:

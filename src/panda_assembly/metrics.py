@@ -40,6 +40,7 @@ class RunSummary:
     recovery_attempts: int = 0
     spiral_entry_detected: bool = False
     retry_success: bool = False
+    recovery_safe_retreat: bool = False
     predictive_guard_triggered: bool = False
     predictive_trigger_time_s: float | None = None
     predictive_trigger_reason: str | None = None

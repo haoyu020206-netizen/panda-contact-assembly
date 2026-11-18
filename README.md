@@ -157,6 +157,21 @@ Both nominal layered trials completed without false recovery. In the known +X 6 
 
 This is not a universal force reduction: nominal position control rose from 106.5 N to 157.9 N, and the diagonal impedance collision still reached 1.24 kN before the reactive supervisor could act. The next control improvement must target approach velocity or force-rate prediction before first impact. The 200 N threshold remains an exploratory simulation criterion, not a hardware safety limit. Evidence and seven executable acceptance checks come from [GitHub Actions run 44356954129](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44356954129).
 
+## Predictive impact guard
+
+The predictive layer queries signed peg-to-wall geometry distance every 2 ms and uses the nearest-point direction and lateral gap to distinguish a projected rim collision from normal hole clearance. A projected collision slows the approach and triggers the existing retract/spiral/retry state machine before contact. The signal is simulation-only; a real system would need an equivalent perception or proximity estimate.
+
+| Scenario / controller | Reactive peak | Predictive peak | Predictive result |
+| --- | ---: | ---: | --- |
+| nominal / impedance | 54.5 N | 54.5 N | success, no trigger |
+| nominal / position | 157.9 N | 180.5 N | success, no trigger |
+| +X 6 mm / impedance | 128.9 N | **36.0 N** | success after spiral retry |
+| +X 6 mm / position | 248.6 N | **187.9 N** | safe reject above the hole |
+| +X+Y 8 mm / impedance | **1235.5 N** | **58.1 N** | safe reject above the hole |
+| +X+Y 8 mm / position | 327.0 N | **200.0 N** | safety abort recovered |
+
+The diagonal impedance case falls by **95.3%** and finishes below the exploratory 200 N force limit. Both nominal controllers preserve task success without a predictive trigger. Cases outside the recovery envelope are explicitly classified as `safe_reject` only after they end above the hole, below the force limit, and with released contact. The benchmark is enforced by executable CI acceptance checks rather than treated as a demonstration-only plot.
+
 ## 已实现
 
 - 自带无网格依赖的 7-DoF Panda 风格 MJCF，可立即验证控制代码；
@@ -172,6 +187,8 @@ This is not a universal force reduction: nominal position control rose from 106.
 - 自由空间/近孔/接触三段轴向限速，以及低力卡住进度超时判定；
 - 局部回撤、阿基米德螺旋寻孔、入口识别和竖直重插状态机；
 - 12 组无保护/分层恢复对照，以及由 7 条任务级指标约束的 CI 验收；
+- 基于孔壁有符号距离、最近点方向和横向投影间隙的预测式碰撞保护；
+- 12 组反应式/预测式对照、安全拒绝分类，以及预测冲击 CI 硬门禁；
 - 正常成功、危险成功、安全中止、卡住、偏孔和深度不足的失败类型统计；
 - 方孔插入任务、接触力读取和成功判据；
 - 孔位、摩擦和工具质量扰动的批量实验；
@@ -256,6 +273,13 @@ python -m panda_assembly safety-recovery --config configs\menagerie.toml --outpu
 ```powershell
 python -m panda_assembly contact-recovery --config configs\menagerie.toml --output runs\contact_recovery
 python scripts\validate_contact_recovery.py runs\contact_recovery\contact_recovery_summary.json
+```
+
+运行孔沿接近预测、提前制动、恢复和安全拒绝对照：
+
+```powershell
+python -m panda_assembly predictive-impact --config configs\menagerie.toml --output runs\predictive_impact
+python scripts\validate_predictive_impact.py runs\predictive_impact\predictive_impact_summary.json
 ```
 
 也可以单独运行位置控制：

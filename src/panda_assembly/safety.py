@@ -478,6 +478,8 @@ def classify_peg_outcome(
     safety_recovered: bool,
     contact_recovery_triggered: bool = False,
     retry_success: bool = False,
+    predictive_guard_triggered: bool = False,
+    recovery_safe_retreat: bool = False,
 ) -> tuple[str, str | None]:
     """Return an outcome and its primary failure type for aggregate reporting."""
     if safety_triggered:
@@ -489,6 +491,8 @@ def classify_peg_outcome(
         if max_contact_force_n > force_limit_n:
             return "unsafe_completion", "excessive_force"
         return "success", None
+    if predictive_guard_triggered and recovery_safe_retreat:
+        return "safe_reject", "recovery_envelope_exceeded"
     if contact_recovery_triggered:
         return "recovery_failed", "jammed"
     if max_contact_force_n > force_limit_n:

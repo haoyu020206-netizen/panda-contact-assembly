@@ -215,6 +215,7 @@ def _finish_run(
     recovery_attempts: int = 0,
     spiral_entry_detected: bool = False,
     retry_success: bool = False,
+    recovery_safe_retreat: bool = False,
     predictive_guard_triggered: bool = False,
     predictive_trigger_time: float | None = None,
     predictive_trigger_reason: str | None = None,
@@ -262,6 +263,7 @@ def _finish_run(
         recovery_attempts=recovery_attempts,
         spiral_entry_detected=spiral_entry_detected,
         retry_success=retry_success,
+        recovery_safe_retreat=recovery_safe_retreat,
         predictive_guard_triggered=predictive_guard_triggered,
         predictive_trigger_time_s=predictive_trigger_time,
         predictive_trigger_reason=predictive_trigger_reason,
@@ -722,6 +724,15 @@ def run_peg(
         recovery_supervisor is not None and recovery_supervisor.triggered
     )
     retry_success = bool(recovery_supervisor is not None and recovery_supervisor.retry_success)
+    recovery_safe_retreat = bool(
+        predictive_guard is not None
+        and predictive_guard.triggered
+        and recovery_supervisor is not None
+        and recovery_supervisor.state_name == "recovery_failed"
+        and final_depth <= 0.0
+        and log.final_contact_force() <= safety.release_force_n
+        and log.max_contact_force() <= safety.force_limit_n
+    )
     geometric_success = completion_time is not None
     outcome, failure_type = classify_peg_outcome(
         geometric_success=geometric_success,
@@ -736,6 +747,10 @@ def run_peg(
         safety_recovered=safety_recovered,
         contact_recovery_triggered=contact_recovery_triggered,
         retry_success=retry_success,
+        predictive_guard_triggered=bool(
+            predictive_guard is not None and predictive_guard.triggered
+        ),
+        recovery_safe_retreat=recovery_safe_retreat,
     )
     return _finish_run(
         config,
@@ -763,6 +778,7 @@ def run_peg(
             recovery_supervisor.entry_detected if recovery_supervisor is not None else False
         ),
         retry_success=retry_success,
+        recovery_safe_retreat=recovery_safe_retreat,
         predictive_guard_triggered=bool(
             predictive_guard is not None and predictive_guard.triggered
         ),
@@ -2266,10 +2282,12 @@ def _predictive_impact_acceptance(
         ),
         "known_jam_remains_recoverable": predictive_jam is not None
         and bool(predictive_jam["success"]),
-        "diagonal_impedance_peak_reduced": reactive_diagonal is not None
+        "diagonal_impedance_peak_reduced_by_80_percent": reactive_diagonal is not None
         and predictive_diagonal is not None
         and float(predictive_diagonal["max_contact_force_n"])
-        < float(reactive_diagonal["max_contact_force_n"]),
+        <= 0.20 * float(reactive_diagonal["max_contact_force_n"]),
+        "diagonal_impedance_below_force_limit": predictive_diagonal is not None
+        and float(predictive_diagonal["max_contact_force_n"]) <= config.force_safety.force_limit_n,
         "all_predictive_safety_aborts_recover": all(
             bool(row["safety_recovered"])
             and float(row["final_contact_force_n"]) <= config.force_safety.release_force_n
