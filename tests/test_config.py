@@ -20,3 +20,5 @@ def test_loads_mvp_config() -> None:
     assert config.boundary_scan.step_m == 0.002
     assert config.boundary_refinement.step_m == 0.0005
     assert config.boundary_refinement.safe_force_limit_n == 200.0
+    assert config.force_safety.force_limit_n == 200.0
+    assert config.force_safety.retract_distance_m == pytest.approx(0.080)

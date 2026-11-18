@@ -5,6 +5,7 @@ from panda_assembly.config import load_config
 from panda_assembly.experiments import (
     BOUNDARY_DIRECTIONS,
     ROBUSTNESS_SCENARIOS,
+    SAFETY_RECOVERY_SCENARIOS,
     _boundary_refinement_points,
     _boundary_scan_points,
     _monte_carlo_variations,
@@ -35,6 +36,12 @@ def test_robustness_scenario_names_are_unique() -> None:
     assert len(names) == 8
     assert len(names) == len(set(names))
     assert names[0] == "nominal"
+
+
+def test_safety_recovery_scenarios_cover_nominal_and_known_hazards() -> None:
+    names = [name for name, _, _ in SAFETY_RECOVERY_SCENARIOS]
+    assert names == ["nominal", "x_plus_6mm", "xy_plus_8mm"]
+    assert len(names) == len(set(names))
 
 
 def test_monte_carlo_variations_are_reproducible_and_bounded() -> None:

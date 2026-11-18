@@ -87,6 +87,17 @@ class BoundaryRefinementConfig:
 
 
 @dataclass(frozen=True)
+class ForceSafetyConfig:
+    force_limit_n: float
+    trigger_duration_s: float
+    hold_time_s: float
+    retract_distance_m: float
+    retract_duration_s: float
+    release_force_n: float
+    minimum_retraction_m: float
+
+
+@dataclass(frozen=True)
 class OutputConfig:
     root: str
     save_csv: bool
@@ -104,6 +115,7 @@ class ProjectConfig:
     monte_carlo: MonteCarloConfig
     boundary_scan: BoundaryScanConfig
     boundary_refinement: BoundaryRefinementConfig
+    force_safety: ForceSafetyConfig
     output: OutputConfig
 
 
@@ -124,6 +136,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     monte_carlo = raw["monte_carlo"]
     boundary_scan = raw["boundary_scan"]
     boundary_refinement = raw["boundary_refinement"]
+    force_safety = raw["force_safety"]
     output = raw["output"]
 
     config = ProjectConfig(
@@ -208,6 +221,15 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             step_m=float(boundary_refinement["step_m"]),
             safe_force_limit_n=float(boundary_refinement["safe_force_limit_n"]),
         ),
+        force_safety=ForceSafetyConfig(
+            force_limit_n=float(force_safety["force_limit_n"]),
+            trigger_duration_s=float(force_safety["trigger_duration_s"]),
+            hold_time_s=float(force_safety["hold_time_s"]),
+            retract_distance_m=float(force_safety["retract_distance_m"]),
+            retract_duration_s=float(force_safety["retract_duration_s"]),
+            release_force_n=float(force_safety["release_force_n"]),
+            minimum_retraction_m=float(force_safety["minimum_retraction_m"]),
+        ),
         output=OutputConfig(
             root=str(output["root"]),
             save_csv=bool(output["save_csv"]),
@@ -243,6 +265,15 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         raise ValueError("boundary_refinement range must be divisible by step_m")
     if refinement.safe_force_limit_n <= 0:
         raise ValueError("boundary_refinement.safe_force_limit_n must be positive")
+    safety = config.force_safety
+    if safety.force_limit_n <= 0 or safety.release_force_n < 0:
+        raise ValueError("force_safety force thresholds are invalid")
+    if safety.trigger_duration_s < 0 or safety.hold_time_s < 0:
+        raise ValueError("force_safety trigger and hold times cannot be negative")
+    if safety.retract_distance_m <= 0 or safety.retract_duration_s <= 0:
+        raise ValueError("force_safety retraction values must be positive")
+    if not 0 < safety.minimum_retraction_m <= safety.retract_distance_m:
+        raise ValueError("force_safety minimum_retraction_m must be within retract_distance_m")
     times = (
         config.peg_task.approach_time,
         config.peg_task.align_time,

@@ -86,6 +86,9 @@ jobs:
           python -m panda_assembly boundary-refine \
             --config configs/menagerie.toml \
             --output showcase-results/boundary-refinement
+          python -m panda_assembly safety-recovery \
+            --config configs/menagerie.toml \
+            --output showcase-results/safety-recovery
 
       - name: Render verified final scene
         env:

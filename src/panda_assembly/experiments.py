@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import time
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime
@@ -28,6 +29,7 @@ from panda_assembly.metrics import (
     total_contact_force,
 )
 from panda_assembly.model import load_model, reset_to_home
+from panda_assembly.safety import ForceSafetySupervisor, classify_peg_outcome
 from panda_assembly.trajectories import quintic_joint_trajectory
 
 
@@ -74,6 +76,20 @@ BOUNDARY_DIRECTIONS = (
     ("xy_neg", "-X-Y", 225.0, -_SQRT_HALF, -_SQRT_HALF),
     ("y_neg", "-Y", 270.0, 0.0, -1.0),
     ("x_pos_y_neg", "+X-Y", 315.0, _SQRT_HALF, -_SQRT_HALF),
+)
+
+
+SAFETY_RECOVERY_SCENARIOS = (
+    ("nominal", "nominal", Variation()),
+    ("x_plus_6mm", "+X 6 mm", Variation(lateral_offset_x=0.006)),
+    (
+        "xy_plus_8mm",
+        "+X+Y 8 mm",
+        Variation(
+            lateral_offset_x=0.008 * _SQRT_HALF,
+            lateral_offset_y=0.008 * _SQRT_HALF,
+        ),
+    ),
 )
 
 
@@ -179,6 +195,13 @@ def _finish_run(
     final_xy_error: float | None = None,
     final_depth: float | None = None,
     controller: str | None = None,
+    outcome: str | None = None,
+    failure_type: str | None = None,
+    safety_triggered: bool = False,
+    safety_trigger_time: float | None = None,
+    safety_trigger_force: float | None = None,
+    retraction_distance: float | None = None,
+    safety_recovered: bool = False,
 ) -> tuple[RunSummary, Path]:
     position_errors = log.position_errors()
     joint_errors = log.joint_errors()
@@ -205,6 +228,14 @@ def _finish_run(
         final_xy_error_m=final_xy_error,
         final_insertion_depth_m=final_depth,
         controller=controller,
+        outcome=outcome,
+        failure_type=failure_type,
+        final_contact_force_n=log.final_contact_force(),
+        safety_triggered=safety_triggered,
+        safety_trigger_time_s=safety_trigger_time,
+        safety_trigger_force_n=safety_trigger_force,
+        retraction_distance_m=retraction_distance,
+        safety_recovered=safety_recovered,
     )
     directory = _output_directory(config, mode, output)
     directory.mkdir(parents=True, exist_ok=True)
@@ -349,6 +380,7 @@ def run_peg(
     output: Path | None = None,
     variation: Variation | None = None,
     controller_kind: str = "impedance",
+    force_safety: bool = False,
 ) -> tuple[RunSummary, Path]:
     variation = variation or Variation()
     model = load_model(timestep=config.simulation.timestep, variant=config.model.variant)
@@ -370,6 +402,18 @@ def run_peg(
     peg = config.peg_task
     log = RunLog()
     completion_time: float | None = None
+    safety = config.force_safety
+    supervisor = (
+        ForceSafetySupervisor(
+            force_limit_n=safety.force_limit_n,
+            trigger_duration_s=safety.trigger_duration_s,
+            hold_time_s=safety.hold_time_s,
+            retract_distance_m=safety.retract_distance_m,
+            retract_duration_s=safety.retract_duration_s,
+        )
+        if force_safety
+        else None
+    )
 
     aligned = np.array(
         [
@@ -398,17 +442,34 @@ def run_peg(
 
     def step(sim_time: float) -> None:
         nonlocal completion_time
+        force = total_contact_force(model, data, peg_id)
+        current_position, current_rotation = site_pose(model, data, ee_id)
         target = desired_position(sim_time)
         target_rotation = desired_rotation(sim_time)
+        safety_state = "disabled"
+        if supervisor is not None:
+            just_triggered = supervisor.update(
+                sim_time,
+                force,
+                current_position,
+                current_rotation,
+            )
+            if just_triggered and isinstance(controller, CartesianPositionController):
+                controller.desired_joint_position[:] = data.qpos[:7]
+            target, target_rotation, safety_state = supervisor.command(
+                sim_time,
+                target,
+                target_rotation,
+            )
         torque, error = controller.torque(model, data, ee_id, target, target_rotation)
         apply_torque(model, data, torque)
-        force = total_contact_force(model, data, peg_id)
         log.append(
             sim_time,
             error[:3],
             force,
             data.qpos,
             orientation_error=error[3:],
+            safety_state=safety_state,
         )
 
         tip_position, _ = site_pose(model, data, tip_id)
@@ -422,16 +483,49 @@ def run_peg(
     final_tip, _ = site_pose(model, data, tip_id)
     final_xy_error = float(np.linalg.norm(final_tip[:2] - hole_position[:2]))
     final_depth = float(hole_position[2] - final_tip[2])
+    final_ee, _ = site_pose(model, data, ee_id)
+    safety_triggered = supervisor is not None and supervisor.triggered
+    retraction_distance = None
+    if safety_triggered:
+        assert supervisor is not None
+        assert supervisor.trigger_position is not None
+        retraction_distance = max(0.0, float(final_ee[2] - supervisor.trigger_position[2]))
+    safety_recovered = bool(
+        safety_triggered
+        and log.final_contact_force() <= safety.release_force_n
+        and retraction_distance is not None
+        and retraction_distance >= safety.minimum_retraction_m
+    )
+    geometric_success = completion_time is not None
+    outcome, failure_type = classify_peg_outcome(
+        geometric_success=geometric_success,
+        max_contact_force_n=log.max_contact_force(),
+        final_contact_force_n=log.final_contact_force(),
+        final_xy_error_m=final_xy_error,
+        final_insertion_depth_m=final_depth,
+        clearance_m=peg.clearance,
+        insertion_depth_m=peg.insertion_depth,
+        force_limit_n=safety.force_limit_n,
+        safety_triggered=safety_triggered,
+        safety_recovered=safety_recovered,
+    )
     return _finish_run(
         config,
         "peg",
         log,
-        success=completion_time is not None,
+        success=geometric_success and not safety_triggered,
         completion_time=completion_time,
         output=output,
         final_xy_error=final_xy_error,
         final_depth=final_depth,
         controller=controller_kind,
+        outcome=outcome,
+        failure_type=failure_type,
+        safety_triggered=safety_triggered,
+        safety_trigger_time=(supervisor.trigger_time_s if supervisor is not None else None),
+        safety_trigger_force=(supervisor.trigger_force_n if supervisor is not None else None),
+        retraction_distance=retraction_distance,
+        safety_recovered=safety_recovered,
     )
 
 
@@ -1423,4 +1517,217 @@ def run_controller_boundary_refinement(config: ProjectConfig, output: Path | Non
             config,
             directory / "boundary_refinement_summary.png",
         )
+    return directory
+
+
+def _save_safety_recovery_plot(
+    rows: list[dict[str, object]], config: ProjectConfig, path: Path
+) -> bool:
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return False
+
+    labels = [
+        f"{scenario_label}\n{controller}"
+        for _, scenario_label, _ in SAFETY_RECOVERY_SCENARIOS
+        for controller in ("impedance", "position")
+    ]
+    pairs = [
+        {
+            policy: next(
+                row
+                for row in rows
+                if row["scenario"] == scenario
+                and row["controller"] == controller
+                and row["policy"] == policy
+            )
+            for policy in ("unguarded", "guarded")
+        }
+        for scenario, _, _ in SAFETY_RECOVERY_SCENARIOS
+        for controller in ("impedance", "position")
+    ]
+    indices = np.arange(len(pairs))
+    width = 0.36
+    colors = {"unguarded": "#b2182b", "guarded": "#2166ac"}
+    figure, axes = plt.subplots(2, 2, figsize=(15, 9))
+
+    for offset, policy in ((-width / 2, "unguarded"), (width / 2, "guarded")):
+        peak_forces = [max(0.1, float(pair[policy]["max_contact_force_n"])) for pair in pairs]
+        final_forces = [max(0.1, float(pair[policy]["final_contact_force_n"])) for pair in pairs]
+        axes[0, 0].bar(
+            indices + offset,
+            peak_forces,
+            width,
+            color=colors[policy],
+            label=policy,
+        )
+        axes[0, 1].bar(
+            indices + offset,
+            final_forces,
+            width,
+            color=colors[policy],
+            label=policy,
+        )
+
+    guarded_retractions = [
+        1000.0 * float(pair["guarded"]["retraction_distance_m"] or 0.0) for pair in pairs
+    ]
+    retraction_colors = [
+        "#1b7837" if bool(pair["guarded"]["safety_recovered"]) else "#bdbdbd" for pair in pairs
+    ]
+    axes[1, 0].bar(indices, guarded_retractions, color=retraction_colors)
+
+    policies = ("unguarded", "guarded")
+    outcome_counts = {
+        policy: Counter(str(row["outcome"]) for row in rows if row["policy"] == policy)
+        for policy in policies
+    }
+    outcomes = sorted({outcome for values in outcome_counts.values() for outcome in values})
+    outcome_indices = np.arange(len(outcomes))
+    for offset, policy in ((-width / 2, "unguarded"), (width / 2, "guarded")):
+        axes[1, 1].bar(
+            outcome_indices + offset,
+            [outcome_counts[policy].get(outcome, 0) for outcome in outcomes],
+            width,
+            color=colors[policy],
+            label=policy,
+        )
+
+    axes[0, 0].axhline(
+        config.force_safety.force_limit_n,
+        color="#333333",
+        linestyle="--",
+        label=f"trigger ({config.force_safety.force_limit_n:g} N)",
+    )
+    axes[0, 0].set_ylabel("Peak contact force [N]")
+    axes[0, 0].set_yscale("log")
+    axes[0, 0].set_title("Peak load")
+    axes[0, 1].axhline(
+        config.force_safety.release_force_n,
+        color="#333333",
+        linestyle="--",
+        label=f"released ({config.force_safety.release_force_n:g} N)",
+    )
+    axes[0, 1].set_ylabel("Final contact force [N]")
+    axes[0, 1].set_yscale("log")
+    axes[0, 1].set_title("Load after recovery")
+    axes[1, 0].axhline(
+        1000.0 * config.force_safety.minimum_retraction_m,
+        color="#333333",
+        linestyle="--",
+        label="minimum recovery distance",
+    )
+    axes[1, 0].set_ylabel("Guarded vertical retraction [mm]")
+    axes[1, 0].set_title("Executed recovery")
+    axes[1, 1].set_ylabel("Trials")
+    axes[1, 1].set_title("Outcome taxonomy")
+    axes[1, 1].set_xticks(outcome_indices, labels=outcomes, rotation=25, ha="right")
+    axes[1, 1].set_yticks(range(0, len(rows) // 2 + 1))
+
+    for axis in (axes[0, 0], axes[0, 1], axes[1, 0]):
+        axis.set_xticks(indices, labels=labels, rotation=25, ha="right")
+    for axis in axes.flat:
+        axis.grid(axis="y", alpha=0.25)
+        axis.legend(fontsize=8)
+    figure.tight_layout()
+    figure.savefig(path, dpi=160)
+    plt.close(figure)
+    return True
+
+
+def run_safety_recovery_comparison(config: ProjectConfig, output: Path | None = None) -> Path:
+    """Compare ordinary insertion with force-triggered stop-and-retract recovery."""
+    directory = _output_directory(config, "safety_recovery", output)
+    directory.mkdir(parents=True, exist_ok=True)
+    trial_config = replace(
+        config,
+        output=replace(config.output, save_plot=False),
+    )
+    rows: list[dict[str, object]] = []
+    for scenario, scenario_label, variation in SAFETY_RECOVERY_SCENARIOS:
+        for controller_kind in ("impedance", "position"):
+            for policy, guarded in (("unguarded", False), ("guarded", True)):
+                summary, _ = run_peg(
+                    trial_config,
+                    viewer=False,
+                    output=directory / scenario / controller_kind / policy,
+                    variation=variation,
+                    controller_kind=controller_kind,
+                    force_safety=guarded,
+                )
+                rows.append(
+                    {
+                        "scenario": scenario,
+                        "scenario_label": scenario_label,
+                        "policy": policy,
+                        **asdict(variation),
+                        **asdict(summary),
+                    }
+                )
+
+    with (directory / "safety_recovery_trials.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    guarded_rows = [row for row in rows if row["policy"] == "guarded"]
+    unsafe_pairs: list[dict[str, object]] = []
+    for guarded in guarded_rows:
+        baseline = next(
+            row
+            for row in rows
+            if row["scenario"] == guarded["scenario"]
+            and row["controller"] == guarded["controller"]
+            and row["policy"] == "unguarded"
+        )
+        if float(baseline["max_contact_force_n"]) > config.force_safety.force_limit_n:
+            unsafe_pairs.append(
+                {
+                    "scenario": guarded["scenario"],
+                    "controller": guarded["controller"],
+                    "unguarded_peak_force_n": baseline["max_contact_force_n"],
+                    "guarded_peak_force_n": guarded["max_contact_force_n"],
+                    "unguarded_final_force_n": baseline["final_contact_force_n"],
+                    "guarded_final_force_n": guarded["final_contact_force_n"],
+                    "peak_force_reduction_n": float(baseline["max_contact_force_n"])
+                    - float(guarded["max_contact_force_n"]),
+                }
+            )
+
+    result = {
+        "model_variant": config.model.variant,
+        "force_safety": asdict(config.force_safety),
+        "force_limit_is_exploratory": True,
+        "taxonomy": {
+            "success": "geometric completion without exceeding the force limit",
+            "unsafe_completion": "geometric completion with an excessive peak force",
+            "safety_abort_recovered": "force-triggered abort that released contact and retracted",
+            "safety_abort": "force-triggered abort without verified release and retraction",
+            "excessive_force": "failed insertion whose peak force exceeded the limit",
+            "jammed": "failed insertion that retained contact without exceeding the force limit",
+            "lateral_misalignment": (
+                "failed insertion outside lateral clearance without retained contact"
+            ),
+            "insufficient_depth": "aligned insertion that did not reach the required depth",
+        },
+        "aggregates": {
+            "evaluations": len(rows),
+            "guarded_triggers": sum(bool(row["safety_triggered"]) for row in guarded_rows),
+            "guarded_recoveries": sum(bool(row["safety_recovered"]) for row in guarded_rows),
+            "unguarded_outcomes": dict(
+                Counter(str(row["outcome"]) for row in rows if row["policy"] == "unguarded")
+            ),
+            "guarded_outcomes": dict(Counter(str(row["outcome"]) for row in guarded_rows)),
+            "unsafe_pair_count": len(unsafe_pairs),
+        },
+        "unsafe_pairs": unsafe_pairs,
+        "trials": rows,
+    }
+    with (directory / "safety_recovery_summary.json").open("w", encoding="utf-8") as handle:
+        json.dump(result, handle, indent=2)
+    if config.output.save_plot:
+        _save_safety_recovery_plot(rows, config, directory / "safety_recovery_summary.png")
     return directory
