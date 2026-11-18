@@ -121,6 +121,23 @@ The 4–8 mm transition region was then rescanned at 0.5 mm resolution. An explo
 
 Both controllers have a **4.5 mm contiguous radius across all eight tested directions**. Impedance control's 36 geometric successes all remained below 200 N. Position control recorded 41 geometric successes, but five were rejected as unsafe; at 6 mm its only geometric success reached **3.11 kN**, giving 0/8 safe successes versus 1/8 for impedance. At 7.5 and 8 mm, position control again produced two geometric successes but zero safe successes. This is the clearest result of the project so far: geometric completion alone can reward damaging contact. Evidence comes from [GitHub Actions run 44180056892](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44180056892).
 
+## Force-triggered stop and retract
+
+![Force-triggered insertion recovery](docs/results/safety-recovery/safety_recovery_summary.png)
+
+A force supervisor now monitors every 2 ms control sample. When the simulated peg contact force reaches the exploratory 200 N threshold, it latches the event, resets the resolved-rate position controller's accumulated joint reference, holds for 50 ms, and commands an 80 mm minimum-jerk vertical retreat. Outcomes are classified as normal success, unsafe completion, recovered safety abort, excessive-force failure, jam, lateral misalignment, or insufficient depth.
+
+| Scenario / controller | Unguarded peak / final force | Guarded peak / final force | Guarded result |
+| --- | ---: | ---: | --- |
+| nominal / impedance | 56.8 / 0.2 N | 56.8 / 0.2 N | success, no trigger |
+| nominal / position | 106.5 / 106.5 N | 106.5 / 106.5 N | success, no trigger |
+| +X 6 mm / impedance | 140.0 / 8.3 N | 140.0 / 8.3 N | jam below threshold, no trigger |
+| +X 6 mm / position | **3111.9 / 385.2 N** | **200.8 / 0.0 N** | triggered, recovered 80.0 mm |
+| +X+Y 8 mm / impedance | 1461.9 / 8.3 N | 1451.3 / 0.0 N | triggered, recovered 79.4 mm |
+| +X+Y 8 mm / position | 1112.6 / 89.5 N | 1112.6 / 0.0 N | triggered, recovered 80.0 mm |
+
+All three guarded trials that exceeded the threshold released contact and completed the configured retreat. The +X 6 mm position-control case is the strongest result: recovery reduced the peak by **93.5%** and prevented a 3.11 kN unsafe geometric completion. The diagonal impacts expose the limitation of reactive thresholding: the first detected 2 ms sample was already 1.11–1.22 kN, so retreat cleared the sustained load but could not undo the instantaneous peak. The 140 N impedance jam also remained below the trigger threshold. Predictive contact slowing and jam timeouts are therefore still required. These simulated thresholds are not hardware safety limits. Evidence comes from [GitHub Actions run 44348538833](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44348538833).
+
 ## 已实现
 
 - 自带无网格依赖的 7-DoF Panda 风格 MJCF，可立即验证控制代码；
@@ -132,6 +149,8 @@ Both controllers have a **4.5 mm contiguous radius across all eight tested direc
 - 固定随机种子的 20 组配对 Monte Carlo 实验、Wilson 成功率区间和接触力均值区间；
 - 八方向、0–12 mm 的失效边界扫描，以及非单调成功检测；
 - 4–8 mm、0.5 mm 分辨率的边界细化，以及 200 N 探索性安全成功判据；
+- 接触力超限锁存、停止、位置环参考复位与最小加加速度竖直回撤；
+- 正常成功、危险成功、安全中止、卡住、偏孔和深度不足的失败类型统计；
 - 方孔插入任务、接触力读取和成功判据；
 - 孔位、摩擦和工具质量扰动的批量实验；
 - CSV 时序数据、JSON 摘要和可选 PNG 曲线；
@@ -204,6 +223,12 @@ python -m panda_assembly boundary-scan --config configs\menagerie.toml --output 
 python -m panda_assembly boundary-refine --config configs\menagerie.toml --output runs\boundary_refinement
 ```
 
+运行危险偏差下的无保护/带回撤策略对照：
+
+```powershell
+python -m panda_assembly safety-recovery --config configs\menagerie.toml --output runs\safety_recovery
+```
+
 也可以单独运行位置控制：
 
 ```powershell
@@ -225,7 +250,7 @@ runs/<experiment>/
 └── metrics.png        # 误差与接触力曲线（安装 matplotlib 时）
 ```
 
-批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。Monte Carlo 模式生成 `monte_carlo_trials.csv`、`monte_carlo_summary.json` 与带置信区间的 `monte_carlo_summary.png`；粗扫描和细化扫描分别生成逐工况 CSV、JSON 摘要和三联图。
+批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。Monte Carlo 模式生成 `monte_carlo_trials.csv`、`monte_carlo_summary.json` 与带置信区间的 `monte_carlo_summary.png`；粗扫描、细化扫描和安全回撤对照分别生成逐工况 CSV、JSON 摘要和汇总图。
 
 ## 指标定义
 
@@ -236,6 +261,9 @@ runs/<experiment>/
 - `max_contact_force_n`：peg 所有接触点法向/切向合力范数之和的最大值；
 - `completion_time_s`：首次同时满足横向误差和插入深度阈值的仿真时间；
 - `final_xy_error_m`、`final_insertion_depth_m`：最终装配几何误差。
+- `outcome`、`failure_type`：装配结果和主要失败类型；
+- `safety_trigger_time_s`、`safety_trigger_force_n`：安全状态机锁存时刻与采样力；
+- `retraction_distance_m`、`safety_recovered`：实际竖直回撤距离，以及是否同时满足解除接触和最小回撤条件。
 
 配置集中在 `configs/mvp.toml` 和 `configs/menagerie.toml`。调整刚度时同步检查阻尼、力矩饱和、峰值接触力与仿真稳定性，不要只追求成功率。
 
@@ -253,6 +281,7 @@ src/panda_assembly/
 ├── math_utils.py                # 姿态误差与阻尼零空间投影
 ├── metrics.py                   # 指标、CSV、JSON、曲线
 ├── model.py                     # 模型加载与接口校验
+├── safety.py                    # 力阈值监控、停止/回撤状态机与失败分类
 └── trajectories.py              # 五次多项式轨迹
 tests/                            # 配置、数学、轨迹与模型测试
 ```
@@ -267,8 +296,8 @@ tests/                            # 配置、数学、轨迹与模型测试
 
 ## 后续升级顺序
 
-1. 按卡住、偏孔和冲击过大建立失败类型统计；
-2. 加入力阈值触发的停止/回撤策略，降低卡死冲击；
+1. 在接触前加入速度调制或力变化率预测，降低单个控制周期内的瞬时冲击；
+2. 加入低力卡住超时、回撤后重试和螺旋搜索，处理未达到 200 N 的卡住；
 3. 做参数敏感性分析，区分位姿、摩擦和质量的贡献；
 4. 考试后再接 ROS2/`ros2_control`、MoveIt2 与 residual RL。
 
