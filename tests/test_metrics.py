@@ -42,7 +42,10 @@ def test_minimum_geom_proximity_reports_nearest_point_axis_component(monkeypatch
         return distance
 
     monkeypatch.setattr("panda_assembly.metrics.mujoco.mj_geomDistance", fake_geom_distance)
-    distance, axis_component = minimum_geom_proximity(object(), object(), 1, (2, 3), 0.020)
+    distance, axis_component, lateral_gap = minimum_geom_proximity(
+        object(), object(), 1, (2, 3), 0.020
+    )
 
     assert distance == pytest.approx(0.006)
     assert axis_component == pytest.approx(1.0)
+    assert lateral_gap == pytest.approx(0.0)

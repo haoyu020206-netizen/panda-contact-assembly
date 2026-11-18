@@ -220,6 +220,7 @@ def _finish_run(
     predictive_trigger_reason: str | None = None,
     predictive_trigger_distance: float | None = None,
     predictive_trigger_axis_component: float | None = None,
+    predictive_trigger_lateral_gap: float | None = None,
     minimum_proximity_distance: float | None = None,
     max_force_rate: float | None = None,
 ) -> tuple[RunSummary, Path]:
@@ -266,6 +267,7 @@ def _finish_run(
         predictive_trigger_reason=predictive_trigger_reason,
         predictive_trigger_distance_m=predictive_trigger_distance,
         predictive_trigger_axis_component=predictive_trigger_axis_component,
+        predictive_trigger_lateral_gap_m=predictive_trigger_lateral_gap,
         minimum_proximity_distance_m=minimum_proximity_distance,
         max_force_rate_n_s=max_force_rate,
     )
@@ -496,6 +498,11 @@ def run_peg(
             retry_insert_duration_s=recovery_values.retry_insert_duration_s,
             max_retries=recovery_values.max_retries,
             search_center=aligned.copy(),
+            search_target_z_m=float(
+                commanded_hole_position[2]
+                - 2.0 * recovery_values.entry_depth_m
+                - vertical_tip_offset[2]
+            ),
             final_target_z_m=float(final_target[2]),
         )
         if contact_recovery
@@ -509,6 +516,7 @@ def run_peg(
             trigger_distance_m=predictive_values.trigger_distance_m,
             minimum_closing_speed_m_s=predictive_values.minimum_closing_speed_m_s,
             minimum_approach_axis_component=(predictive_values.minimum_approach_axis_component),
+            maximum_lateral_gap_m=predictive_values.maximum_lateral_gap_m,
             probe_speed_m_s=predictive_values.probe_speed_m_s,
             force_rate_limit_n_s=predictive_values.force_rate_limit_n_s,
             force_rate_min_force_n=predictive_values.force_rate_min_force_n,
@@ -555,10 +563,15 @@ def run_peg(
         insertion_active = sim_time > peg.align_time and completion_time is None
         proximity_distance = None
         proximity_axis_component = 0.0
+        proximity_lateral_gap = predictive_values.distance_cutoff_m
         predictive_triggered_now = False
         predictive_state = "disabled"
         if predictive_guard is not None:
-            proximity_distance, proximity_axis_component = minimum_geom_proximity(
+            (
+                proximity_distance,
+                proximity_axis_component,
+                proximity_lateral_gap,
+            ) = minimum_geom_proximity(
                 model,
                 data,
                 peg_id,
@@ -575,6 +588,7 @@ def run_peg(
                 sim_time,
                 proximity_distance,
                 proximity_axis_component,
+                proximity_lateral_gap,
                 force,
                 prediction_active,
             )
@@ -662,6 +676,9 @@ def run_peg(
                 predictive_guard.last_approach_axis_component
                 if predictive_guard is not None
                 else None
+            ),
+            proximity_lateral_gap=(
+                predictive_guard.last_lateral_gap_m if predictive_guard is not None else None
             ),
             closing_speed=(
                 predictive_guard.last_closing_speed_m_s if predictive_guard is not None else None
@@ -760,6 +777,9 @@ def run_peg(
         ),
         predictive_trigger_axis_component=(
             predictive_guard.triggered_at_axis_component if predictive_guard is not None else None
+        ),
+        predictive_trigger_lateral_gap=(
+            predictive_guard.triggered_at_lateral_gap_m if predictive_guard is not None else None
         ),
         minimum_proximity_distance=(
             predictive_guard.minimum_distance_m if predictive_guard is not None else None

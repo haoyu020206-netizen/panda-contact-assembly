@@ -145,6 +145,7 @@ class PredictiveImpactGuard:
     trigger_distance_m: float
     minimum_closing_speed_m_s: float
     minimum_approach_axis_component: float
+    maximum_lateral_gap_m: float
     probe_speed_m_s: float
     force_rate_limit_n_s: float
     force_rate_min_force_n: float
@@ -153,6 +154,7 @@ class PredictiveImpactGuard:
     last_distance_m: float | None = None
     last_closing_speed_m_s: float = 0.0
     last_approach_axis_component: float = 0.0
+    last_lateral_gap_m: float | None = None
     last_force_rate_n_s: float = 0.0
     active_now: bool = False
     minimum_distance_m: float | None = None
@@ -161,6 +163,7 @@ class PredictiveImpactGuard:
     trigger_reason: str | None = None
     triggered_at_distance_m: float | None = None
     triggered_at_axis_component: float | None = None
+    triggered_at_lateral_gap_m: float | None = None
     triggered_at_closing_speed_m_s: float | None = None
     triggered_at_force_rate_n_s: float | None = None
 
@@ -176,6 +179,8 @@ class PredictiveImpactGuard:
             and self.last_distance_m <= self.slowdown_distance_m
             and self.last_closing_speed_m_s >= self.minimum_closing_speed_m_s
             and self.last_approach_axis_component >= self.minimum_approach_axis_component
+            and self.last_lateral_gap_m is not None
+            and self.last_lateral_gap_m <= self.maximum_lateral_gap_m
         )
 
     @property
@@ -195,6 +200,7 @@ class PredictiveImpactGuard:
         sim_time: float,
         proximity_distance_m: float,
         approach_axis_component: float,
+        lateral_gap_m: float,
         contact_force_n: float,
         active: bool,
     ) -> bool:
@@ -210,6 +216,7 @@ class PredictiveImpactGuard:
         self.last_distance_m = proximity_distance_m
         self.last_closing_speed_m_s = closing_speed
         self.last_approach_axis_component = approach_axis_component
+        self.last_lateral_gap_m = lateral_gap_m
         self.last_force_rate_n_s = force_rate
         self.active_now = active
 
@@ -227,6 +234,7 @@ class PredictiveImpactGuard:
             proximity_distance_m <= self.trigger_distance_m
             and closing_speed >= self.minimum_closing_speed_m_s
             and approach_axis_component >= self.minimum_approach_axis_component
+            and lateral_gap_m <= self.maximum_lateral_gap_m
         ):
             reason = "proximity"
         elif (
@@ -241,6 +249,7 @@ class PredictiveImpactGuard:
         self.trigger_reason = reason
         self.triggered_at_distance_m = proximity_distance_m
         self.triggered_at_axis_component = approach_axis_component
+        self.triggered_at_lateral_gap_m = lateral_gap_m
         self.triggered_at_closing_speed_m_s = closing_speed
         self.triggered_at_force_rate_n_s = force_rate
         return True
@@ -292,6 +301,7 @@ class SpiralRecoverySupervisor:
     retry_insert_duration_s: float
     max_retries: int
     search_center: FloatArray
+    search_target_z_m: float
     final_target_z_m: float
     state_name: str = "monitoring"
     attempts: int = 0
@@ -432,10 +442,12 @@ class SpiralRecoverySupervisor:
             angle = 2.0 * np.pi * self.spiral_cycles * progress
             target[0] = self.search_center[0] + radius * np.cos(angle)
             target[1] = self.search_center[1] + radius * np.sin(angle)
-            if progress <= 0.25:
-                target[2] += self.retract_distance_m * (1.0 - _minimum_jerk(progress / 0.25))
-            else:
-                target[2] -= self.spiral_descent_m * _minimum_jerk((progress - 0.25) / 0.75)
+            search_start_z = self.trigger_position[2] + self.retract_distance_m
+            search_end_z = min(
+                self.trigger_position[2] - self.spiral_descent_m,
+                self.search_target_z_m,
+            )
+            target[2] = search_start_z + _minimum_jerk(progress) * (search_end_z - search_start_z)
             return target, self.trigger_rotation.copy(), self.state_name
 
         if self.state_name == "retry_insert":

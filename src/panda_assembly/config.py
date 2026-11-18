@@ -126,6 +126,7 @@ class PredictiveImpactConfig:
     trigger_distance_m: float
     minimum_closing_speed_m_s: float
     minimum_approach_axis_component: float
+    maximum_lateral_gap_m: float
     probe_speed_m_s: float
     force_rate_limit_n_s: float
     force_rate_min_force_n: float
@@ -297,6 +298,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             minimum_approach_axis_component=float(
                 predictive_impact["minimum_approach_axis_component"]
             ),
+            maximum_lateral_gap_m=float(predictive_impact["maximum_lateral_gap_m"]),
             probe_speed_m_s=float(predictive_impact["probe_speed_m_s"]),
             force_rate_limit_n_s=float(predictive_impact["force_rate_limit_n_s"]),
             force_rate_min_force_n=float(predictive_impact["force_rate_min_force_n"]),
@@ -380,6 +382,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         predictive.trigger_distance_m,
         predictive.minimum_closing_speed_m_s,
         predictive.minimum_approach_axis_component,
+        predictive.maximum_lateral_gap_m,
         predictive.probe_speed_m_s,
         predictive.force_rate_limit_n_s,
         predictive.force_rate_min_force_n,

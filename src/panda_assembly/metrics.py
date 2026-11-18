@@ -45,6 +45,7 @@ class RunSummary:
     predictive_trigger_reason: str | None = None
     predictive_trigger_distance_m: float | None = None
     predictive_trigger_axis_component: float | None = None
+    predictive_trigger_lateral_gap_m: float | None = None
     minimum_proximity_distance_m: float | None = None
     max_force_rate_n_s: float | None = None
 
@@ -64,6 +65,7 @@ class RunLog:
         safety_state: str | None = None,
         proximity_distance: float | None = None,
         proximity_axis_component: float | None = None,
+        proximity_lateral_gap: float | None = None,
         closing_speed: float | None = None,
         force_rate: float | None = None,
     ) -> None:
@@ -83,6 +85,7 @@ class RunLog:
             "safety_state": safety_state,
             "proximity_distance_m": proximity_distance,
             "proximity_axis_component": proximity_axis_component,
+            "proximity_lateral_gap_m": proximity_lateral_gap,
             "closing_speed_m_s": closing_speed,
             "force_rate_n_s": force_rate,
         }
@@ -164,7 +167,7 @@ def minimum_geom_distance(
     cutoff_m: float,
 ) -> float:
     """Return the smallest signed source-to-target collision-geometry distance."""
-    distance, _ = minimum_geom_proximity(
+    distance, _, _ = minimum_geom_proximity(
         model,
         data,
         source_geom_id,
@@ -180,10 +183,11 @@ def minimum_geom_proximity(
     source_geom_id: int,
     target_geom_ids: tuple[int, ...],
     cutoff_m: float,
-) -> tuple[float, float]:
-    """Return minimum signed distance and the nearest-point vector's vertical share."""
+) -> tuple[float, float, float]:
+    """Return minimum distance plus nearest-point axial share and lateral gap."""
     minimum = cutoff_m
     approach_axis_component = 0.0
+    lateral_gap_m = cutoff_m
     for target_geom_id in target_geom_ids:
         from_to = np.zeros(6)
         distance = mujoco.mj_geomDistance(
@@ -202,7 +206,8 @@ def minimum_geom_proximity(
         approach_axis_component = (
             abs(float(separation[2])) / separation_norm if separation_norm > 1e-12 else 0.0
         )
-    return minimum, approach_axis_component
+        lateral_gap_m = float(np.linalg.norm(separation[:2]))
+    return minimum, approach_axis_component, lateral_gap_m
 
 
 def save_summary(summary: RunSummary, path: Path) -> None:
