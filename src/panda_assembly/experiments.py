@@ -508,9 +508,7 @@ def run_peg(
             slowdown_distance_m=predictive_values.slowdown_distance_m,
             trigger_distance_m=predictive_values.trigger_distance_m,
             minimum_closing_speed_m_s=predictive_values.minimum_closing_speed_m_s,
-            minimum_approach_axis_component=(
-                predictive_values.minimum_approach_axis_component
-            ),
+            minimum_approach_axis_component=(predictive_values.minimum_approach_axis_component),
             probe_speed_m_s=predictive_values.probe_speed_m_s,
             force_rate_limit_n_s=predictive_values.force_rate_limit_n_s,
             force_rate_min_force_n=predictive_values.force_rate_min_force_n,
@@ -761,9 +759,7 @@ def run_peg(
             predictive_guard.triggered_at_distance_m if predictive_guard is not None else None
         ),
         predictive_trigger_axis_component=(
-            predictive_guard.triggered_at_axis_component
-            if predictive_guard is not None
-            else None
+            predictive_guard.triggered_at_axis_component if predictive_guard is not None else None
         ),
         minimum_proximity_distance=(
             predictive_guard.minimum_distance_m if predictive_guard is not None else None

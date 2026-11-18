@@ -175,8 +175,7 @@ class PredictiveImpactGuard:
             and self.last_distance_m is not None
             and self.last_distance_m <= self.slowdown_distance_m
             and self.last_closing_speed_m_s >= self.minimum_closing_speed_m_s
-            and self.last_approach_axis_component
-            >= self.minimum_approach_axis_component
+            and self.last_approach_axis_component >= self.minimum_approach_axis_component
         )
 
     @property
