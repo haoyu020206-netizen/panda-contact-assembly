@@ -16,6 +16,7 @@ from panda_assembly.experiments import (
     run_monte_carlo_comparison,
     run_peg,
     run_robustness_batch,
+    run_safety_recovery_comparison,
 )
 
 
@@ -36,6 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
             "monte-carlo",
             "boundary-scan",
             "boundary-refine",
+            "safety-recovery",
         ),
         help="Experiment to run.",
     )
@@ -93,6 +95,12 @@ def main() -> None:
             raise SystemExit("--viewer is not available for boundary refinement")
         output = run_controller_boundary_refinement(config, args.output)
         print(json.dumps({"mode": "boundary-refine", "output": str(output)}, indent=2))
+        return
+    if args.mode == "safety-recovery":
+        if args.viewer:
+            raise SystemExit("--viewer is not available for safety recovery comparisons")
+        output = run_safety_recovery_comparison(config, args.output)
+        print(json.dumps({"mode": "safety-recovery", "output": str(output)}, indent=2))
         return
 
     if args.mode == "joint":

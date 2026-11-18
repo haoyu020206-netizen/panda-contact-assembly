@@ -27,11 +27,19 @@ class RunSummary:
     final_xy_error_m: float | None = None
     final_insertion_depth_m: float | None = None
     controller: str | None = None
+    outcome: str | None = None
+    failure_type: str | None = None
+    final_contact_force_n: float | None = None
+    safety_triggered: bool = False
+    safety_trigger_time_s: float | None = None
+    safety_trigger_force_n: float | None = None
+    retraction_distance_m: float | None = None
+    safety_recovered: bool = False
 
 
 class RunLog:
     def __init__(self) -> None:
-        self.rows: list[dict[str, float | None]] = []
+        self.rows: list[dict[str, float | str | None]] = []
 
     def append(
         self,
@@ -41,8 +49,9 @@ class RunLog:
         qpos: FloatArray,
         joint_error: FloatArray | None = None,
         orientation_error: FloatArray | None = None,
+        safety_state: str | None = None,
     ) -> None:
-        row: dict[str, float | None] = {
+        row: dict[str, float | str | None] = {
             "time_s": float(time),
             "position_error_x_m": None,
             "position_error_y_m": None,
@@ -55,6 +64,7 @@ class RunLog:
                 None if orientation_error is None else float(np.linalg.norm(orientation_error))
             ),
             "contact_force_n": float(contact_force),
+            "safety_state": safety_state,
         }
         if position_error is not None:
             row.update(
@@ -99,7 +109,10 @@ class RunLog:
         )
 
     def max_contact_force(self) -> float:
-        return max((row["contact_force_n"] for row in self.rows), default=0.0)
+        return max((float(row["contact_force_n"]) for row in self.rows), default=0.0)
+
+    def final_contact_force(self) -> float:
+        return float(self.rows[-1]["contact_force_n"]) if self.rows else 0.0
 
     def save_csv(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)

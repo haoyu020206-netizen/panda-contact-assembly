@@ -59,6 +59,15 @@ max_offset_m = 0.008
 step_m = 0.0005
 safe_force_limit_n = 200.0
 
+[force_safety]
+force_limit_n = 200.0
+trigger_duration_s = 0.0
+hold_time_s = 0.05
+retract_distance_m = 0.080
+retract_duration_s = 1.0
+release_force_n = 5.0
+minimum_retraction_m = 0.020
+
 [output]
 root = "runs"
 save_csv = true
