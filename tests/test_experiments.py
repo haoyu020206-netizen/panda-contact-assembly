@@ -8,6 +8,7 @@ from panda_assembly.experiments import (
     SAFETY_RECOVERY_SCENARIOS,
     _boundary_refinement_points,
     _boundary_scan_points,
+    _contact_recovery_acceptance,
     _monte_carlo_variations,
     run_joint,
     wilson_score_interval,
@@ -42,6 +43,49 @@ def test_safety_recovery_scenarios_cover_nominal_and_known_hazards() -> None:
     names = [name for name, _, _ in SAFETY_RECOVERY_SCENARIOS]
     assert names == ["nominal", "x_plus_6mm", "xy_plus_8mm"]
     assert len(names) == len(set(names))
+
+
+def test_contact_recovery_acceptance_requires_nominal_retry_and_safe_abort() -> None:
+    config = load_config(CONFIG)
+    rows = []
+    for scenario, _, _ in SAFETY_RECOVERY_SCENARIOS:
+        for controller in ("impedance", "position"):
+            for policy in ("unguarded", "layered"):
+                row = {
+                    "scenario": scenario,
+                    "controller": controller,
+                    "policy": policy,
+                    "success": scenario == "nominal",
+                    "outcome": "success" if scenario == "nominal" else "safety_abort_recovered",
+                    "max_contact_force_n": 100.0,
+                    "final_contact_force_n": 0.0,
+                    "safety_triggered": policy == "layered" and scenario == "xy_plus_8mm",
+                    "safety_recovered": policy == "layered" and scenario == "xy_plus_8mm",
+                    "retraction_distance_m": 0.08,
+                    "contact_recovery_triggered": False,
+                    "spiral_entry_detected": False,
+                    "retry_success": False,
+                }
+                rows.append(row)
+
+    retry = next(
+        row
+        for row in rows
+        if (row["scenario"], row["controller"], row["policy"])
+        == ("x_plus_6mm", "impedance", "layered")
+    )
+    retry.update(
+        success=True,
+        outcome="success_after_recovery",
+        contact_recovery_triggered=True,
+        spiral_entry_detected=True,
+        retry_success=True,
+    )
+
+    acceptance = _contact_recovery_acceptance(rows, config)
+    assert acceptance["passed"]
+    retry["retry_success"] = False
+    assert not _contact_recovery_acceptance(rows, config)["passed"]
 
 
 def test_monte_carlo_variations_are_reproducible_and_bounded() -> None:

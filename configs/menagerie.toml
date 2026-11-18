@@ -68,6 +68,26 @@ retract_duration_s = 1.0
 release_force_n = 5.0
 minimum_retraction_m = 0.020
 
+[contact_recovery]
+precontact_distance_m = 0.015
+slow_zone_depth_m = 0.010
+free_speed_m_s = 0.200
+precontact_speed_m_s = 0.005
+contact_slow_force_n = 20.0
+contact_speed_m_s = 0.0015
+jam_force_n = 5.0
+jam_timeout_s = 0.6
+jam_progress_m = 0.001
+retract_distance_m = 0.015
+retract_duration_s = 0.6
+spiral_radius_m = 0.008
+spiral_cycles = 4
+spiral_duration_s = 4.0
+spiral_descent_m = 0.012
+entry_depth_m = 0.004
+retry_insert_duration_s = 2.0
+max_retries = 1
+
 [output]
 root = "runs"
 save_csv = true

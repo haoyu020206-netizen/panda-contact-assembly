@@ -138,6 +138,25 @@ A force supervisor now monitors every 2 ms control sample. When the simulated pe
 
 All three guarded trials that exceeded the threshold released contact and completed the configured retreat. The +X 6 mm position-control case is the strongest result: recovery reduced the peak by **93.5%** and prevented a 3.11 kN unsafe geometric completion. The diagonal impacts expose the limitation of reactive thresholding: the first detected 2 ms sample was already 1.11–1.22 kN, so retreat cleared the sustained load but could not undo the instantaneous peak. The 140 N impedance jam also remained below the trigger threshold. Predictive contact slowing and jam timeouts are therefore still required. These simulated thresholds are not hardware safety limits. Evidence comes from [GitHub Actions run 44348538833](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44348538833).
 
+## Contact-aware spiral retry
+
+![Contact-aware insertion recovery](docs/results/contact-recovery/contact_recovery_summary.png)
+
+The insertion policy now layers three mechanisms: 0.20 m/s free-space approach with 0.005 m/s pre-contact and 0.0015 m/s contact speed limits; a 5 N, 0.6 s low-progress jam timeout followed by 15 mm local retraction and a four-turn, 8 mm-radius spiral; and the existing 200 N stop-and-retreat supervisor as the final guard. The same six controller/scenario combinations were run both unguarded and layered.
+
+| Scenario / controller | Unguarded result | Layered result |
+| --- | --- | --- |
+| nominal / impedance | success, 56.8 N peak | success, 54.5 N peak |
+| nominal / position | success, 106.5 N peak | success, 157.9 N peak |
+| +X 6 mm / impedance | jammed, 140.0 N peak | **spiral retry success**, 128.9 N peak |
+| +X 6 mm / position | unsafe completion, 3111.9 N peak | safety abort recovered, 200.0 N peak |
+| +X+Y 8 mm / impedance | excessive force, 1461.9 N peak | safety abort recovered, 1235.5 N peak |
+| +X+Y 8 mm / position | excessive force, 1112.6 N peak | safety abort recovered, 200.1 N peak |
+
+Both nominal layered trials completed without false recovery. In the known +X 6 mm impedance jam, the controller detected low progress at **12.096 s**, retracted, found the entry during spiral search, and completed the retry at **17.290 s** with 58.0 mm final depth and 0.21 N final contact force. All three high-force aborts released contact, retracted at least 80 mm, and ended at 0 N. The layered matrix therefore produced three safe task successes, including one success after recovery, plus three verified safety aborts.
+
+This is not a universal force reduction: nominal position control rose from 106.5 N to 157.9 N, and the diagonal impedance collision still reached 1.24 kN before the reactive supervisor could act. The next control improvement must target approach velocity or force-rate prediction before first impact. The 200 N threshold remains an exploratory simulation criterion, not a hardware safety limit. Evidence and seven executable acceptance checks come from [GitHub Actions run 44356954129](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44356954129).
+
 ## 已实现
 
 - 自带无网格依赖的 7-DoF Panda 风格 MJCF，可立即验证控制代码；
@@ -150,6 +169,9 @@ All three guarded trials that exceeded the threshold released contact and comple
 - 八方向、0–12 mm 的失效边界扫描，以及非单调成功检测；
 - 4–8 mm、0.5 mm 分辨率的边界细化，以及 200 N 探索性安全成功判据；
 - 接触力超限锁存、停止、位置环参考复位与最小加加速度竖直回撤；
+- 自由空间/近孔/接触三段轴向限速，以及低力卡住进度超时判定；
+- 局部回撤、阿基米德螺旋寻孔、入口识别和竖直重插状态机；
+- 12 组无保护/分层恢复对照，以及由 7 条任务级指标约束的 CI 验收；
 - 正常成功、危险成功、安全中止、卡住、偏孔和深度不足的失败类型统计；
 - 方孔插入任务、接触力读取和成功判据；
 - 孔位、摩擦和工具质量扰动的批量实验；
@@ -229,6 +251,13 @@ python -m panda_assembly boundary-refine --config configs\menagerie.toml --outpu
 python -m panda_assembly safety-recovery --config configs\menagerie.toml --output runs\safety_recovery
 ```
 
+运行接近限速、低力卡住检测、螺旋寻孔、重插和高力回撤的分层对照：
+
+```powershell
+python -m panda_assembly contact-recovery --config configs\menagerie.toml --output runs\contact_recovery
+python scripts\validate_contact_recovery.py runs\contact_recovery\contact_recovery_summary.json
+```
+
 也可以单独运行位置控制：
 
 ```powershell
@@ -250,7 +279,7 @@ runs/<experiment>/
 └── metrics.png        # 误差与接触力曲线（安装 matplotlib 时）
 ```
 
-批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。Monte Carlo 模式生成 `monte_carlo_trials.csv`、`monte_carlo_summary.json` 与带置信区间的 `monte_carlo_summary.png`；粗扫描、细化扫描和安全回撤对照分别生成逐工况 CSV、JSON 摘要和汇总图。
+批量实验额外生成 `batch_summary.csv` 与 `aggregate.json`。Monte Carlo 模式生成 `monte_carlo_trials.csv`、`monte_carlo_summary.json` 与带置信区间的 `monte_carlo_summary.png`；粗扫描、细化扫描、安全回撤和接触恢复对照分别生成逐工况 CSV、JSON 摘要和汇总图。
 
 ## 指标定义
 
@@ -264,6 +293,8 @@ runs/<experiment>/
 - `outcome`、`failure_type`：装配结果和主要失败类型；
 - `safety_trigger_time_s`、`safety_trigger_force_n`：安全状态机锁存时刻与采样力；
 - `retraction_distance_m`、`safety_recovered`：实际竖直回撤距离，以及是否同时满足解除接触和最小回撤条件。
+- `contact_recovery_triggered`、`jam_detected_time_s`、`recovery_attempts`：低力卡住恢复是否触发、触发时刻与尝试次数；
+- `spiral_entry_detected`、`retry_success`：螺旋是否找到入口，以及后续重插是否达到成功判据。
 
 配置集中在 `configs/mvp.toml` 和 `configs/menagerie.toml`。调整刚度时同步检查阻尼、力矩饱和、峰值接触力与仿真稳定性，不要只追求成功率。
 
@@ -281,7 +312,7 @@ src/panda_assembly/
 ├── math_utils.py                # 姿态误差与阻尼零空间投影
 ├── metrics.py                   # 指标、CSV、JSON、曲线
 ├── model.py                     # 模型加载与接口校验
-├── safety.py                    # 力阈值监控、停止/回撤状态机与失败分类
+├── safety.py                    # 接近限速、卡住/螺旋重试、高力回撤与失败分类
 └── trajectories.py              # 五次多项式轨迹
 tests/                            # 配置、数学、轨迹与模型测试
 ```
@@ -296,9 +327,9 @@ tests/                            # 配置、数学、轨迹与模型测试
 
 ## 后续升级顺序
 
-1. 在接触前加入速度调制或力变化率预测，降低单个控制周期内的瞬时冲击；
-2. 加入低力卡住超时、回撤后重试和螺旋搜索，处理未达到 200 N 的卡住；
-3. 做参数敏感性分析，区分位姿、摩擦和质量的贡献；
+1. 加入力变化率/接触距离预测和横向速度限制，降低单个控制周期内的瞬时冲击；
+2. 对限速、卡住阈值、螺旋半径和搜索时间做参数敏感性与消融实验；
+3. 把分层恢复加入固定种子 Monte Carlo，报告恢复成功率和代价分布；
 4. 考试后再接 ROS2/`ros2_control`、MoveIt2 与 residual RL。
 
 ## 简历表述

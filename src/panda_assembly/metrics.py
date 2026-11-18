@@ -35,6 +35,11 @@ class RunSummary:
     safety_trigger_force_n: float | None = None
     retraction_distance_m: float | None = None
     safety_recovered: bool = False
+    contact_recovery_triggered: bool = False
+    jam_detected_time_s: float | None = None
+    recovery_attempts: int = 0
+    spiral_entry_detected: bool = False
+    retry_success: bool = False
 
 
 class RunLog:

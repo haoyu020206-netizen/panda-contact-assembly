@@ -8,6 +8,7 @@ from pathlib import Path
 from panda_assembly.config import load_config
 from panda_assembly.experiments import (
     run_cartesian,
+    run_contact_recovery_comparison,
     run_controller_boundary_refinement,
     run_controller_boundary_scan,
     run_controller_comparison,
@@ -38,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
             "boundary-scan",
             "boundary-refine",
             "safety-recovery",
+            "contact-recovery",
         ),
         help="Experiment to run.",
     )
@@ -101,6 +103,12 @@ def main() -> None:
             raise SystemExit("--viewer is not available for safety recovery comparisons")
         output = run_safety_recovery_comparison(config, args.output)
         print(json.dumps({"mode": "safety-recovery", "output": str(output)}, indent=2))
+        return
+    if args.mode == "contact-recovery":
+        if args.viewer:
+            raise SystemExit("--viewer is not available for contact recovery comparisons")
+        output = run_contact_recovery_comparison(config, args.output)
+        print(json.dumps({"mode": "contact-recovery", "output": str(output)}, indent=2))
         return
 
     if args.mode == "joint":

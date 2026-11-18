@@ -98,6 +98,28 @@ class ForceSafetyConfig:
 
 
 @dataclass(frozen=True)
+class ContactRecoveryConfig:
+    precontact_distance_m: float
+    slow_zone_depth_m: float
+    free_speed_m_s: float
+    precontact_speed_m_s: float
+    contact_slow_force_n: float
+    contact_speed_m_s: float
+    jam_force_n: float
+    jam_timeout_s: float
+    jam_progress_m: float
+    retract_distance_m: float
+    retract_duration_s: float
+    spiral_radius_m: float
+    spiral_cycles: int
+    spiral_duration_s: float
+    spiral_descent_m: float
+    entry_depth_m: float
+    retry_insert_duration_s: float
+    max_retries: int
+
+
+@dataclass(frozen=True)
 class OutputConfig:
     root: str
     save_csv: bool
@@ -116,6 +138,7 @@ class ProjectConfig:
     boundary_scan: BoundaryScanConfig
     boundary_refinement: BoundaryRefinementConfig
     force_safety: ForceSafetyConfig
+    contact_recovery: ContactRecoveryConfig
     output: OutputConfig
 
 
@@ -137,6 +160,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     boundary_scan = raw["boundary_scan"]
     boundary_refinement = raw["boundary_refinement"]
     force_safety = raw["force_safety"]
+    contact_recovery = raw["contact_recovery"]
     output = raw["output"]
 
     config = ProjectConfig(
@@ -230,6 +254,26 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             release_force_n=float(force_safety["release_force_n"]),
             minimum_retraction_m=float(force_safety["minimum_retraction_m"]),
         ),
+        contact_recovery=ContactRecoveryConfig(
+            precontact_distance_m=float(contact_recovery["precontact_distance_m"]),
+            slow_zone_depth_m=float(contact_recovery["slow_zone_depth_m"]),
+            free_speed_m_s=float(contact_recovery["free_speed_m_s"]),
+            precontact_speed_m_s=float(contact_recovery["precontact_speed_m_s"]),
+            contact_slow_force_n=float(contact_recovery["contact_slow_force_n"]),
+            contact_speed_m_s=float(contact_recovery["contact_speed_m_s"]),
+            jam_force_n=float(contact_recovery["jam_force_n"]),
+            jam_timeout_s=float(contact_recovery["jam_timeout_s"]),
+            jam_progress_m=float(contact_recovery["jam_progress_m"]),
+            retract_distance_m=float(contact_recovery["retract_distance_m"]),
+            retract_duration_s=float(contact_recovery["retract_duration_s"]),
+            spiral_radius_m=float(contact_recovery["spiral_radius_m"]),
+            spiral_cycles=int(contact_recovery["spiral_cycles"]),
+            spiral_duration_s=float(contact_recovery["spiral_duration_s"]),
+            spiral_descent_m=float(contact_recovery["spiral_descent_m"]),
+            entry_depth_m=float(contact_recovery["entry_depth_m"]),
+            retry_insert_duration_s=float(contact_recovery["retry_insert_duration_s"]),
+            max_retries=int(contact_recovery["max_retries"]),
+        ),
         output=OutputConfig(
             root=str(output["root"]),
             save_csv=bool(output["save_csv"]),
@@ -274,6 +318,33 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         raise ValueError("force_safety retraction values must be positive")
     if not 0 < safety.minimum_retraction_m <= safety.retract_distance_m:
         raise ValueError("force_safety minimum_retraction_m must be within retract_distance_m")
+    recovery = config.contact_recovery
+    positive_recovery_values = (
+        recovery.precontact_distance_m,
+        recovery.slow_zone_depth_m,
+        recovery.free_speed_m_s,
+        recovery.precontact_speed_m_s,
+        recovery.contact_slow_force_n,
+        recovery.contact_speed_m_s,
+        recovery.jam_force_n,
+        recovery.jam_timeout_s,
+        recovery.jam_progress_m,
+        recovery.retract_distance_m,
+        recovery.retract_duration_s,
+        recovery.spiral_radius_m,
+        recovery.spiral_duration_s,
+        recovery.spiral_descent_m,
+        recovery.entry_depth_m,
+        recovery.retry_insert_duration_s,
+    )
+    if any(value <= 0 for value in positive_recovery_values):
+        raise ValueError("contact_recovery values must be positive")
+    if not recovery.contact_speed_m_s <= recovery.precontact_speed_m_s <= recovery.free_speed_m_s:
+        raise ValueError("contact_recovery speeds must be ordered contact <= precontact <= free")
+    if recovery.jam_force_n >= config.force_safety.force_limit_n:
+        raise ValueError("contact_recovery.jam_force_n must be below force_safety.force_limit_n")
+    if recovery.spiral_cycles <= 0 or recovery.max_retries <= 0:
+        raise ValueError("contact_recovery cycles and retries must be positive")
     times = (
         config.peg_task.approach_time,
         config.peg_task.align_time,
