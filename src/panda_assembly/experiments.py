@@ -24,7 +24,7 @@ from panda_assembly.math_utils import interpolate_rotation, smoothstep, vertical
 from panda_assembly.metrics import (
     RunLog,
     RunSummary,
-    minimum_geom_distance,
+    minimum_geom_proximity,
     save_plot,
     save_summary,
     total_contact_force,
@@ -219,6 +219,7 @@ def _finish_run(
     predictive_trigger_time: float | None = None,
     predictive_trigger_reason: str | None = None,
     predictive_trigger_distance: float | None = None,
+    predictive_trigger_axis_component: float | None = None,
     minimum_proximity_distance: float | None = None,
     max_force_rate: float | None = None,
 ) -> tuple[RunSummary, Path]:
@@ -264,6 +265,7 @@ def _finish_run(
         predictive_trigger_time_s=predictive_trigger_time,
         predictive_trigger_reason=predictive_trigger_reason,
         predictive_trigger_distance_m=predictive_trigger_distance,
+        predictive_trigger_axis_component=predictive_trigger_axis_component,
         minimum_proximity_distance_m=minimum_proximity_distance,
         max_force_rate_n_s=max_force_rate,
     )
@@ -427,10 +429,9 @@ def run_peg(
     commanded_hole_position[0] -= variation.lateral_offset_x
     commanded_hole_position[1] -= variation.lateral_offset_y
     tip_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "peg_tip")
-    socket_geom_ids = tuple(
+    socket_wall_geom_ids = tuple(
         mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
         for name in (
-            "socket_base",
             "socket_x_pos",
             "socket_x_neg",
             "socket_y_pos",
@@ -507,6 +508,9 @@ def run_peg(
             slowdown_distance_m=predictive_values.slowdown_distance_m,
             trigger_distance_m=predictive_values.trigger_distance_m,
             minimum_closing_speed_m_s=predictive_values.minimum_closing_speed_m_s,
+            minimum_approach_axis_component=(
+                predictive_values.minimum_approach_axis_component
+            ),
             probe_speed_m_s=predictive_values.probe_speed_m_s,
             force_rate_limit_n_s=predictive_values.force_rate_limit_n_s,
             force_rate_min_force_n=predictive_values.force_rate_min_force_n,
@@ -552,14 +556,15 @@ def run_peg(
         target_rotation = desired_rotation(sim_time)
         insertion_active = sim_time > peg.align_time and completion_time is None
         proximity_distance = None
+        proximity_axis_component = 0.0
         predictive_triggered_now = False
         predictive_state = "disabled"
         if predictive_guard is not None:
-            proximity_distance = minimum_geom_distance(
+            proximity_distance, proximity_axis_component = minimum_geom_proximity(
                 model,
                 data,
                 peg_id,
-                socket_geom_ids,
+                socket_wall_geom_ids,
                 predictive_values.distance_cutoff_m,
             )
             prediction_active = bool(
@@ -571,6 +576,7 @@ def run_peg(
             predictive_triggered_now = predictive_guard.update(
                 sim_time,
                 proximity_distance,
+                proximity_axis_component,
                 force,
                 prediction_active,
             )
@@ -654,6 +660,11 @@ def run_peg(
                 f"|recovery:{recovery_state}|lateral:{lateral_state}"
             ),
             proximity_distance=proximity_distance,
+            proximity_axis_component=(
+                predictive_guard.last_approach_axis_component
+                if predictive_guard is not None
+                else None
+            ),
             closing_speed=(
                 predictive_guard.last_closing_speed_m_s if predictive_guard is not None else None
             ),
@@ -748,6 +759,11 @@ def run_peg(
         ),
         predictive_trigger_distance=(
             predictive_guard.triggered_at_distance_m if predictive_guard is not None else None
+        ),
+        predictive_trigger_axis_component=(
+            predictive_guard.triggered_at_axis_component
+            if predictive_guard is not None
+            else None
         ),
         minimum_proximity_distance=(
             predictive_guard.minimum_distance_m if predictive_guard is not None else None

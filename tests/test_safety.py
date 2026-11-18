@@ -90,16 +90,17 @@ def test_predictive_guard_slows_then_triggers_before_contact() -> None:
         slowdown_distance_m=0.004,
         trigger_distance_m=0.002,
         minimum_closing_speed_m_s=0.0002,
+        minimum_approach_axis_component=0.98,
         probe_speed_m_s=0.0005,
         force_rate_limit_n_s=50000.0,
         force_rate_min_force_n=20.0,
     )
 
-    assert not guard.update(0.0, 0.010, 0.0, False)
-    assert not guard.update(0.01, 0.003, 0.0, True)
+    assert not guard.update(0.0, 0.010, 1.0, 0.0, False)
+    assert not guard.update(0.01, 0.003, 1.0, 0.0, True)
     assert guard.slowing
     assert guard.speed_cap_m_s == pytest.approx(0.0005)
-    assert guard.update(0.02, 0.0019, 0.0, True)
+    assert guard.update(0.02, 0.0019, 1.0, 0.0, True)
     assert guard.triggered
     assert guard.trigger_reason == "proximity"
     assert guard.triggered_at_distance_m == pytest.approx(0.0019)
@@ -111,15 +112,36 @@ def test_predictive_guard_force_rate_is_a_backup_trigger() -> None:
         slowdown_distance_m=0.004,
         trigger_distance_m=0.002,
         minimum_closing_speed_m_s=0.0002,
+        minimum_approach_axis_component=0.98,
         probe_speed_m_s=0.0005,
         force_rate_limit_n_s=50000.0,
         force_rate_min_force_n=20.0,
     )
 
-    assert not guard.update(0.0, 0.010, 0.0, True)
-    assert guard.update(0.002, 0.010, 120.0, True)
+    assert not guard.update(0.0, 0.010, 1.0, 0.0, True)
+    assert guard.update(0.002, 0.010, 1.0, 120.0, True)
     assert guard.trigger_reason == "force_rate"
     assert guard.triggered_at_force_rate_n_s == pytest.approx(60000.0)
+
+
+def test_predictive_guard_ignores_lateral_clearance_and_stationary_proximity() -> None:
+    guard = PredictiveImpactGuard(
+        timestep_s=0.01,
+        slowdown_distance_m=0.012,
+        trigger_distance_m=0.008,
+        minimum_closing_speed_m_s=0.0002,
+        minimum_approach_axis_component=0.98,
+        probe_speed_m_s=0.0005,
+        force_rate_limit_n_s=50000.0,
+        force_rate_min_force_n=20.0,
+    )
+
+    assert not guard.update(0.0, 0.010, 0.7, 0.0, True)
+    assert not guard.update(0.01, 0.007, 0.7, 0.0, True)
+    assert not guard.slowing
+    assert not guard.triggered
+    assert not guard.update(0.02, 0.007, 1.0, 0.0, True)
+    assert not guard.slowing
 
 
 def test_lateral_command_limiter_caps_recovery_step() -> None:
@@ -189,6 +211,14 @@ def test_spiral_recovery_detects_jam_searches_and_retries() -> None:
         (
             {"geometric_success": True, "max_contact_force_n": 100.0},
             ("success", None),
+        ),
+        (
+            {
+                "geometric_success": True,
+                "max_contact_force_n": 100.0,
+                "contact_recovery_triggered": True,
+            },
+            ("success_after_recovery", None),
         ),
         (
             {"geometric_success": True, "max_contact_force_n": 300.0},

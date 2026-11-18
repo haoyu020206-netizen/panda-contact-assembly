@@ -144,6 +144,7 @@ class PredictiveImpactGuard:
     slowdown_distance_m: float
     trigger_distance_m: float
     minimum_closing_speed_m_s: float
+    minimum_approach_axis_component: float
     probe_speed_m_s: float
     force_rate_limit_n_s: float
     force_rate_min_force_n: float
@@ -151,12 +152,15 @@ class PredictiveImpactGuard:
     previous_force_n: float = 0.0
     last_distance_m: float | None = None
     last_closing_speed_m_s: float = 0.0
+    last_approach_axis_component: float = 0.0
     last_force_rate_n_s: float = 0.0
+    active_now: bool = False
     minimum_distance_m: float | None = None
     maximum_force_rate_n_s: float = 0.0
     trigger_time_s: float | None = None
     trigger_reason: str | None = None
     triggered_at_distance_m: float | None = None
+    triggered_at_axis_component: float | None = None
     triggered_at_closing_speed_m_s: float | None = None
     triggered_at_force_rate_n_s: float | None = None
 
@@ -166,7 +170,14 @@ class PredictiveImpactGuard:
 
     @property
     def slowing(self) -> bool:
-        return self.last_distance_m is not None and self.last_distance_m <= self.slowdown_distance_m
+        return bool(
+            self.active_now
+            and self.last_distance_m is not None
+            and self.last_distance_m <= self.slowdown_distance_m
+            and self.last_closing_speed_m_s >= self.minimum_closing_speed_m_s
+            and self.last_approach_axis_component
+            >= self.minimum_approach_axis_component
+        )
 
     @property
     def speed_cap_m_s(self) -> float | None:
@@ -184,6 +195,7 @@ class PredictiveImpactGuard:
         self,
         sim_time: float,
         proximity_distance_m: float,
+        approach_axis_component: float,
         contact_force_n: float,
         active: bool,
     ) -> bool:
@@ -198,7 +210,9 @@ class PredictiveImpactGuard:
         self.previous_force_n = contact_force_n
         self.last_distance_m = proximity_distance_m
         self.last_closing_speed_m_s = closing_speed
+        self.last_approach_axis_component = approach_axis_component
         self.last_force_rate_n_s = force_rate
+        self.active_now = active
 
         if active:
             if self.minimum_distance_m is None:
@@ -213,6 +227,7 @@ class PredictiveImpactGuard:
         if (
             proximity_distance_m <= self.trigger_distance_m
             and closing_speed >= self.minimum_closing_speed_m_s
+            and approach_axis_component >= self.minimum_approach_axis_component
         ):
             reason = "proximity"
         elif (
@@ -226,6 +241,7 @@ class PredictiveImpactGuard:
         self.trigger_time_s = sim_time
         self.trigger_reason = reason
         self.triggered_at_distance_m = proximity_distance_m
+        self.triggered_at_axis_component = approach_axis_component
         self.triggered_at_closing_speed_m_s = closing_speed
         self.triggered_at_force_rate_n_s = force_rate
         return True
@@ -457,7 +473,7 @@ def classify_peg_outcome(
         outcome = "safety_abort_recovered" if safety_recovered else "safety_abort"
         return outcome, "excessive_force"
     if geometric_success:
-        if retry_success:
+        if retry_success or contact_recovery_triggered:
             return "success_after_recovery", None
         if max_contact_force_n > force_limit_n:
             return "unsafe_completion", "excessive_force"

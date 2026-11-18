@@ -125,6 +125,7 @@ class PredictiveImpactConfig:
     slowdown_distance_m: float
     trigger_distance_m: float
     minimum_closing_speed_m_s: float
+    minimum_approach_axis_component: float
     probe_speed_m_s: float
     force_rate_limit_n_s: float
     force_rate_min_force_n: float
@@ -293,6 +294,9 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             slowdown_distance_m=float(predictive_impact["slowdown_distance_m"]),
             trigger_distance_m=float(predictive_impact["trigger_distance_m"]),
             minimum_closing_speed_m_s=float(predictive_impact["minimum_closing_speed_m_s"]),
+            minimum_approach_axis_component=float(
+                predictive_impact["minimum_approach_axis_component"]
+            ),
             probe_speed_m_s=float(predictive_impact["probe_speed_m_s"]),
             force_rate_limit_n_s=float(predictive_impact["force_rate_limit_n_s"]),
             force_rate_min_force_n=float(predictive_impact["force_rate_min_force_n"]),
@@ -375,6 +379,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         predictive.slowdown_distance_m,
         predictive.trigger_distance_m,
         predictive.minimum_closing_speed_m_s,
+        predictive.minimum_approach_axis_component,
         predictive.probe_speed_m_s,
         predictive.force_rate_limit_n_s,
         predictive.force_rate_min_force_n,
@@ -390,6 +395,8 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         raise ValueError("predictive_impact distances must satisfy trigger <= slowdown < cutoff")
     if predictive.probe_speed_m_s > recovery.precontact_speed_m_s:
         raise ValueError("predictive_impact.probe_speed_m_s cannot exceed precontact speed")
+    if predictive.minimum_approach_axis_component > 1.0:
+        raise ValueError("predictive minimum approach-axis component cannot exceed 1")
     if predictive.force_rate_min_force_n >= safety.force_limit_n:
         raise ValueError("predictive force-rate threshold must be below force safety limit")
     times = (

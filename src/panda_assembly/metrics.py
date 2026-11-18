@@ -44,6 +44,7 @@ class RunSummary:
     predictive_trigger_time_s: float | None = None
     predictive_trigger_reason: str | None = None
     predictive_trigger_distance_m: float | None = None
+    predictive_trigger_axis_component: float | None = None
     minimum_proximity_distance_m: float | None = None
     max_force_rate_n_s: float | None = None
 
@@ -62,6 +63,7 @@ class RunLog:
         orientation_error: FloatArray | None = None,
         safety_state: str | None = None,
         proximity_distance: float | None = None,
+        proximity_axis_component: float | None = None,
         closing_speed: float | None = None,
         force_rate: float | None = None,
     ) -> None:
@@ -80,6 +82,7 @@ class RunLog:
             "contact_force_n": float(contact_force),
             "safety_state": safety_state,
             "proximity_distance_m": proximity_distance,
+            "proximity_axis_component": proximity_axis_component,
             "closing_speed_m_s": closing_speed,
             "force_rate_n_s": force_rate,
         }
@@ -161,9 +164,28 @@ def minimum_geom_distance(
     cutoff_m: float,
 ) -> float:
     """Return the smallest signed source-to-target collision-geometry distance."""
+    distance, _ = minimum_geom_proximity(
+        model,
+        data,
+        source_geom_id,
+        target_geom_ids,
+        cutoff_m,
+    )
+    return distance
+
+
+def minimum_geom_proximity(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    source_geom_id: int,
+    target_geom_ids: tuple[int, ...],
+    cutoff_m: float,
+) -> tuple[float, float]:
+    """Return minimum signed distance and the nearest-point vector's vertical share."""
     minimum = cutoff_m
-    from_to = np.zeros(6)
+    approach_axis_component = 0.0
     for target_geom_id in target_geom_ids:
+        from_to = np.zeros(6)
         distance = mujoco.mj_geomDistance(
             model,
             data,
@@ -172,8 +194,15 @@ def minimum_geom_distance(
             cutoff_m,
             from_to,
         )
-        minimum = min(minimum, float(distance))
-    return minimum
+        if float(distance) >= minimum:
+            continue
+        minimum = float(distance)
+        separation = from_to[3:] - from_to[:3]
+        separation_norm = float(np.linalg.norm(separation))
+        approach_axis_component = (
+            abs(float(separation[2])) / separation_norm if separation_norm > 1e-12 else 0.0
+        )
+    return minimum, approach_axis_component
 
 
 def save_summary(summary: RunSummary, path: Path) -> None:
