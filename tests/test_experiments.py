@@ -10,6 +10,7 @@ from panda_assembly.experiments import (
     _boundary_scan_points,
     _contact_recovery_acceptance,
     _monte_carlo_variations,
+    _predictive_impact_acceptance,
     run_joint,
     wilson_score_interval,
 )
@@ -86,6 +87,47 @@ def test_contact_recovery_acceptance_requires_nominal_retry_and_safe_abort() -> 
     assert acceptance["passed"]
     retry["retry_success"] = False
     assert not _contact_recovery_acceptance(rows, config)["passed"]
+
+
+def test_predictive_acceptance_requires_early_trigger_and_impact_reduction() -> None:
+    config = load_config(CONFIG)
+    rows = []
+    for scenario, _, _ in SAFETY_RECOVERY_SCENARIOS:
+        for controller in ("impedance", "position"):
+            for policy in ("reactive", "predictive"):
+                nominal = scenario == "nominal"
+                predictive = policy == "predictive"
+                rows.append(
+                    {
+                        "scenario": scenario,
+                        "controller": controller,
+                        "policy": policy,
+                        "success": nominal or (predictive and scenario == "x_plus_6mm"),
+                        "outcome": (
+                            "success"
+                            if nominal
+                            else "success_after_recovery"
+                            if predictive and scenario == "x_plus_6mm"
+                            else "safety_abort_recovered"
+                        ),
+                        "max_contact_force_n": 100.0 if predictive else 1000.0,
+                        "final_contact_force_n": 0.0,
+                        "predictive_guard_triggered": predictive and not nominal,
+                        "safety_triggered": not nominal and scenario == "xy_plus_8mm",
+                        "safety_recovered": not nominal and scenario == "xy_plus_8mm",
+                    }
+                )
+
+    acceptance = _predictive_impact_acceptance(rows, config)
+    assert acceptance["passed"]
+    diagonal = next(
+        row
+        for row in rows
+        if (row["scenario"], row["controller"], row["policy"])
+        == ("xy_plus_8mm", "impedance", "predictive")
+    )
+    diagonal["max_contact_force_n"] = 1000.0
+    assert not _predictive_impact_acceptance(rows, config)["passed"]
 
 
 def test_monte_carlo_variations_are_reproducible_and_bounded() -> None:

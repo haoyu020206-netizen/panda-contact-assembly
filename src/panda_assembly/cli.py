@@ -16,6 +16,7 @@ from panda_assembly.experiments import (
     run_joint,
     run_monte_carlo_comparison,
     run_peg,
+    run_predictive_impact_comparison,
     run_robustness_batch,
     run_safety_recovery_comparison,
 )
@@ -40,6 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
             "boundary-refine",
             "safety-recovery",
             "contact-recovery",
+            "predictive-impact",
         ),
         help="Experiment to run.",
     )
@@ -109,6 +111,12 @@ def main() -> None:
             raise SystemExit("--viewer is not available for contact recovery comparisons")
         output = run_contact_recovery_comparison(config, args.output)
         print(json.dumps({"mode": "contact-recovery", "output": str(output)}, indent=2))
+        return
+    if args.mode == "predictive-impact":
+        if args.viewer:
+            raise SystemExit("--viewer is not available for predictive impact comparisons")
+        output = run_predictive_impact_comparison(config, args.output)
+        print(json.dumps({"mode": "predictive-impact", "output": str(output)}, indent=2))
         return
 
     if args.mode == "joint":

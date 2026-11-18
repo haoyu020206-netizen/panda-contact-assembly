@@ -88,6 +88,18 @@ entry_depth_m = 0.004
 retry_insert_duration_s = 2.0
 max_retries = 1
 
+[predictive_impact]
+distance_cutoff_m = 0.020
+slowdown_distance_m = 0.019
+trigger_distance_m = 0.018
+minimum_closing_speed_m_s = 0.0002
+minimum_approach_axis_component = 0.98
+maximum_lateral_gap_m = 0.0005
+probe_speed_m_s = 0.0005
+force_rate_limit_n_s = 50000.0
+force_rate_min_force_n = 20.0
+lateral_speed_limit_m_s = 0.020
+
 [output]
 root = "runs"
 save_csv = true

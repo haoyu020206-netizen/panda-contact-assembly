@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from panda_assembly.metrics import RunLog
+from panda_assembly.metrics import RunLog, minimum_geom_proximity
 
 
 def test_position_and_joint_errors_are_kept_in_their_own_units() -> None:
@@ -28,3 +28,24 @@ def test_position_and_joint_errors_are_kept_in_their_own_units() -> None:
     assert joint_log.position_errors().size == 0
     assert joint_log.orientation_errors().size == 0
     assert joint_log.joint_errors()[0] == pytest.approx(np.sqrt(0.07))
+
+
+def test_minimum_geom_proximity_reports_nearest_point_axis_component(monkeypatch) -> None:
+    candidates = {
+        2: (0.010, np.array([0.0, 0.0, 0.0, 0.010, 0.0, 0.0])),
+        3: (0.006, np.array([0.0, 0.0, 0.0, 0.0, 0.0, -0.006])),
+    }
+
+    def fake_geom_distance(model, data, source, target, cutoff, from_to):
+        distance, points = candidates[target]
+        from_to[:] = points
+        return distance
+
+    monkeypatch.setattr("panda_assembly.metrics.mujoco.mj_geomDistance", fake_geom_distance)
+    distance, axis_component, lateral_gap = minimum_geom_proximity(
+        object(), object(), 1, (2, 3), 0.020
+    )
+
+    assert distance == pytest.approx(0.006)
+    assert axis_component == pytest.approx(1.0)
+    assert lateral_gap == pytest.approx(0.0)
