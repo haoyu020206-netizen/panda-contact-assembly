@@ -159,6 +159,8 @@ This is not a universal force reduction: nominal position control rose from 106.
 
 ## Predictive impact guard
 
+![Predictive impact guard comparison](docs/results/predictive-impact/predictive_impact_summary.png)
+
 The predictive layer queries signed peg-to-wall geometry distance every 2 ms and uses the nearest-point direction and lateral gap to distinguish a projected rim collision from normal hole clearance. A projected collision slows the approach and triggers the existing retract/spiral/retry state machine before contact. The signal is simulation-only; a real system would need an equivalent perception or proximity estimate.
 
 | Scenario / controller | Reactive peak | Predictive peak | Predictive result |
@@ -170,7 +172,7 @@ The predictive layer queries signed peg-to-wall geometry distance every 2 ms and
 | +X+Y 8 mm / impedance | **1235.5 N** | **58.1 N** | safe reject above the hole |
 | +X+Y 8 mm / position | 327.0 N | **200.0 N** | safety abort recovered |
 
-The diagonal impedance case falls by **95.3%** and finishes below the exploratory 200 N force limit. Both nominal controllers preserve task success without a predictive trigger. Cases outside the recovery envelope are explicitly classified as `safe_reject` only after they end above the hole, below the force limit, and with released contact. The benchmark is enforced by executable CI acceptance checks rather than treated as a demonstration-only plot.
+The diagonal impedance case falls by **95.3%** and finishes below the exploratory 200 N force limit. Both nominal controllers preserve task success without a predictive trigger. Cases outside the recovery envelope are explicitly classified as `safe_reject` only after they end above the hole, below the force limit, and with released contact. The benchmark is enforced by nine executable CI acceptance checks rather than treated as a demonstration-only plot. Evidence comes from [GitHub Actions run 44418587196](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44418587196).
 
 ## 已实现
 
