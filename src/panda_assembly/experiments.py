@@ -1956,6 +1956,57 @@ def _save_contact_recovery_plot(
     return True
 
 
+def _contact_recovery_acceptance(
+    rows: list[dict[str, object]], config: ProjectConfig
+) -> dict[str, object]:
+    """Evaluate the fixed recovery matrix against its regression expectations."""
+    expected_keys = {
+        (scenario, controller, policy)
+        for scenario, _, _ in SAFETY_RECOVERY_SCENARIOS
+        for controller in ("impedance", "position")
+        for policy in ("unguarded", "layered")
+    }
+    keyed = {
+        (str(row["scenario"]), str(row["controller"]), str(row["policy"])): row for row in rows
+    }
+    layered = [row for row in rows if row["policy"] == "layered"]
+    nominal = [row for row in layered if row["scenario"] == "nominal"]
+    retry = keyed.get(("x_plus_6mm", "impedance", "layered"))
+    safety_aborts = [row for row in layered if bool(row["safety_triggered"])]
+    unresolved_outcomes = {"unsafe_completion", "excessive_force", "jammed"}
+
+    checks = {
+        "complete_matrix": set(keyed) == expected_keys and len(rows) == len(expected_keys),
+        "nominal_success_preserved": len(nominal) == 2
+        and all(
+            bool(row["success"])
+            and not bool(row["contact_recovery_triggered"])
+            and not bool(row["safety_triggered"])
+            for row in nominal
+        ),
+        "known_jam_retry_succeeds": retry is not None
+        and bool(retry["success"])
+        and bool(retry["contact_recovery_triggered"])
+        and bool(retry["spiral_entry_detected"])
+        and bool(retry["retry_success"])
+        and retry["outcome"] == "success_after_recovery",
+        "retry_stays_below_force_limit": retry is not None
+        and float(retry["max_contact_force_n"]) <= config.force_safety.force_limit_n,
+        "high_force_path_is_exercised": bool(safety_aborts),
+        "all_safety_aborts_release_and_retract": bool(safety_aborts)
+        and all(
+            bool(row["safety_recovered"])
+            and float(row["final_contact_force_n"]) <= config.force_safety.release_force_n
+            and float(row["retraction_distance_m"]) >= config.force_safety.minimum_retraction_m
+            for row in safety_aborts
+        ),
+        "no_unresolved_layered_outcome": not any(
+            str(row["outcome"]) in unresolved_outcomes for row in layered
+        ),
+    }
+    return {"passed": all(checks.values()), "checks": checks}
+
+
 def run_contact_recovery_comparison(config: ProjectConfig, output: Path | None = None) -> Path:
     """Evaluate speed limiting, jam detection, spiral search, and force retreat together."""
     directory = _output_directory(config, "contact_recovery", output)
@@ -2004,6 +2055,7 @@ def run_contact_recovery_comparison(config: ProjectConfig, output: Path | None =
                 "plus high-force stop and retreat"
             ),
         },
+        "acceptance": _contact_recovery_acceptance(rows, config),
         "aggregates": {
             "evaluations": len(rows),
             "layered_successes": sum(bool(row["success"]) for row in layered_rows),

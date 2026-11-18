@@ -114,3 +114,8 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Validate contact recovery acceptance
+        run: >-
+          python scripts/validate_contact_recovery.py
+          showcase-results/contact-recovery/contact_recovery_summary.json
+
