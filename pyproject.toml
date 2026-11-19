@@ -18,9 +18,15 @@ dependencies = [
 [project.optional-dependencies]
 plot = ["matplotlib>=3.8"]
 dev = [
+  "gymnasium>=1.4,<1.5",
   "matplotlib>=3.8",
   "pytest>=8.0",
   "ruff>=0.8",
+]
+rl = [
+  "gymnasium>=1.4,<1.5",
+  "matplotlib>=3.8",
+  "stable-baselines3>=2.9.2,<2.10",
 ]
 
 [project.scripts]

@@ -1,0 +1,10 @@
+{
+  "github_actions_run": 44629584472,
+  "run_url": "https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44629584472",
+  "source_commit": "b0e6d502befaccb68deb85a3915a591daedf6d5d",
+  "branch": "codex/residual-rl-mvp",
+  "runner": "ubuntu-latest",
+  "python": "3.12",
+  "config": "configs/mvp.toml",
+  "artifact_name": "residual-rl-results"
+}

@@ -42,11 +42,18 @@ def build_parser() -> argparse.ArgumentParser:
             "safety-recovery",
             "contact-recovery",
             "predictive-impact",
+            "residual-baseline",
         ),
         help="Experiment to run.",
     )
     parser.add_argument("--config", type=Path, default=Path("configs/mvp.toml"))
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument(
+        "--episodes",
+        type=int,
+        default=4,
+        help="Number of episodes for residual-policy evaluation modes.",
+    )
     parser.add_argument(
         "--controller",
         choices=("impedance", "position"),
@@ -117,6 +124,24 @@ def main() -> None:
             raise SystemExit("--viewer is not available for predictive impact comparisons")
         output = run_predictive_impact_comparison(config, args.output)
         print(json.dumps({"mode": "predictive-impact", "output": str(output)}, indent=2))
+        return
+    if args.mode == "residual-baseline":
+        if args.viewer:
+            raise SystemExit("--viewer is not available for residual baseline evaluation")
+        from panda_assembly.residual_rl import (
+            evaluate_residual_policy,
+            save_episode_results,
+            zero_residual_policy,
+        )
+
+        output = args.output or Path(config.output.root) / "residual-baseline"
+        results = evaluate_residual_policy(
+            config,
+            zero_residual_policy,
+            args.episodes,
+        )
+        save_episode_results(results, output)
+        print(json.dumps({"mode": "residual-baseline", "output": str(output)}, indent=2))
         return
 
     if args.mode == "joint":

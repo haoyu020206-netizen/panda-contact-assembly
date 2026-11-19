@@ -33,6 +33,15 @@ jobs:
       - name: Run tests
         run: python -m pytest
 
+      - name: Validate committed residual-RL evidence
+        run: >-
+          python scripts/validate_residual_rl.py
+          docs/results/residual-rl
+          --min-evaluation-episodes 20
+          --min-learned-success-rate 0.9
+          --max-learned-safety-violations 0
+          --require-non-regression
+
   experiments:
     needs: quality
     runs-on: ubuntu-latest

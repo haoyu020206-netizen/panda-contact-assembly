@@ -134,6 +134,22 @@ class PredictiveImpactConfig:
 
 
 @dataclass(frozen=True)
+class ResidualRLConfig:
+    seed: int
+    control_interval_s: float
+    episode_duration_s: float
+    max_position_offset_m: tuple[float, float, float]
+    max_position_rate_m_s: tuple[float, float, float]
+    lateral_offset_limit_m: float
+    friction_scale_min: float
+    friction_scale_max: float
+    tool_mass_scale_min: float
+    tool_mass_scale_max: float
+    success_bonus: float
+    safety_penalty: float
+
+
+@dataclass(frozen=True)
 class OutputConfig:
     root: str
     save_csv: bool
@@ -154,6 +170,7 @@ class ProjectConfig:
     force_safety: ForceSafetyConfig
     contact_recovery: ContactRecoveryConfig
     predictive_impact: PredictiveImpactConfig
+    residual_rl: ResidualRLConfig
     output: OutputConfig
 
 
@@ -177,6 +194,7 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
     force_safety = raw["force_safety"]
     contact_recovery = raw["contact_recovery"]
     predictive_impact = raw["predictive_impact"]
+    residual_rl = raw["residual_rl"]
     output = raw["output"]
 
     config = ProjectConfig(
@@ -304,6 +322,24 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
             force_rate_min_force_n=float(predictive_impact["force_rate_min_force_n"]),
             lateral_speed_limit_m_s=float(predictive_impact["lateral_speed_limit_m_s"]),
         ),
+        residual_rl=ResidualRLConfig(
+            seed=int(residual_rl["seed"]),
+            control_interval_s=float(residual_rl["control_interval_s"]),
+            episode_duration_s=float(residual_rl["episode_duration_s"]),
+            max_position_offset_m=_tuple(
+                residual_rl["max_position_offset_m"], 3, "max_position_offset_m"
+            ),
+            max_position_rate_m_s=_tuple(
+                residual_rl["max_position_rate_m_s"], 3, "max_position_rate_m_s"
+            ),
+            lateral_offset_limit_m=float(residual_rl["lateral_offset_limit_m"]),
+            friction_scale_min=float(residual_rl["friction_scale_min"]),
+            friction_scale_max=float(residual_rl["friction_scale_max"]),
+            tool_mass_scale_min=float(residual_rl["tool_mass_scale_min"]),
+            tool_mass_scale_max=float(residual_rl["tool_mass_scale_max"]),
+            success_bonus=float(residual_rl["success_bonus"]),
+            safety_penalty=float(residual_rl["safety_penalty"]),
+        ),
         output=OutputConfig(
             root=str(output["root"]),
             save_csv=bool(output["save_csv"]),
@@ -402,6 +438,31 @@ def _validate(raw: dict[str, Any]) -> ProjectConfig:
         raise ValueError("predictive minimum approach-axis component cannot exceed 1")
     if predictive.force_rate_min_force_n >= safety.force_limit_n:
         raise ValueError("predictive force-rate threshold must be below force safety limit")
+    residual = config.residual_rl
+    residual_positive_values = (
+        residual.control_interval_s,
+        residual.episode_duration_s,
+        *residual.max_position_offset_m,
+        *residual.max_position_rate_m_s,
+        residual.lateral_offset_limit_m,
+        residual.friction_scale_min,
+        residual.friction_scale_max,
+        residual.tool_mass_scale_min,
+        residual.tool_mass_scale_max,
+        residual.success_bonus,
+        residual.safety_penalty,
+    )
+    if any(value <= 0 for value in residual_positive_values):
+        raise ValueError("residual_rl values must be positive")
+    if residual.friction_scale_min > residual.friction_scale_max:
+        raise ValueError("residual_rl friction scale bounds are reversed")
+    if residual.tool_mass_scale_min > residual.tool_mass_scale_max:
+        raise ValueError("residual_rl tool mass scale bounds are reversed")
+    action_repeat = residual.control_interval_s / config.simulation.timestep
+    if abs(action_repeat - round(action_repeat)) >= 1e-9:
+        raise ValueError("residual_rl.control_interval_s must divide into simulation timestep")
+    if residual.episode_duration_s < config.peg_task.insert_time:
+        raise ValueError("residual_rl episode must include the full insertion trajectory")
     times = (
         config.peg_task.approach_time,
         config.peg_task.align_time,
