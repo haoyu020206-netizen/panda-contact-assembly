@@ -1,6 +1,14 @@
 name: Residual RL Training
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/residual-rl.yml"
+      - "configs/*.toml"
+      - "pyproject.toml"
+      - "scripts/train_residual_sac.py"
+      - "src/panda_assembly/residual_rl.py"
+      - "tests/test_residual_rl.py"
   workflow_dispatch:
     inputs:
       timesteps:
@@ -41,8 +49,8 @@ jobs:
           python scripts/train_residual_sac.py
           --config configs/mvp.toml
           --output residual-rl-results
-          --timesteps "${{ inputs.timesteps }}"
-          --evaluation-episodes "${{ inputs.evaluation_episodes }}"
+          --timesteps "${{ inputs.timesteps || '500' }}"
+          --evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
 
       - name: Upload policy and evaluation
         uses: actions/upload-artifact@v7
