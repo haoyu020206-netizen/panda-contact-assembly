@@ -187,7 +187,7 @@ python -m pip install -e ".[rl]"
 python scripts\train_residual_sac.py --config configs\mvp.toml --timesteps 50000 --evaluation-episodes 20 --output runs\residual_sac
 ```
 
-The script first evaluates a zero-residual impedance baseline, trains SAC, then evaluates both policies on identical seeded disturbances. It writes the model, per-episode CSV files, summaries, and `comparison.json`. The manual **Residual RL Training** GitHub Actions workflow provides the same path without a local PyTorch/MuJoCo installation. A 500-step PR smoke run verifies API compatibility and artifact creation but is intentionally not treated as learning evidence.
+The script first evaluates a zero-residual impedance baseline and a privileged pose-servo reference. Reference trajectories behavior-clone the actor before SAC continues online optimization. All policies are evaluated on identical seeded disturbances. The output contains the BC and SAC models, per-episode CSV files, summaries, and `comparison.json`. The manual **Residual RL Training** GitHub Actions workflow provides the same path without a local PyTorch/MuJoCo installation. A 500-step PR smoke run verifies API compatibility and artifact creation but is intentionally not treated as learning evidence.
 
 ## 已实现
 

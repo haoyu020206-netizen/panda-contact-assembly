@@ -9,6 +9,7 @@ from panda_assembly.config import load_config
 from panda_assembly.residual_rl import (
     ResidualActionFilter,
     ResidualPegInsertionEnv,
+    collect_reference_dataset,
     pose_servo_reference_policy,
 )
 
@@ -69,3 +70,11 @@ def test_action_and_observation_spaces_are_bounded() -> None:
         assert np.all(np.isfinite(env.observation_space.high))
     finally:
         env.close()
+
+
+def test_reference_dataset_has_aligned_observation_action_pairs() -> None:
+    observations, actions = collect_reference_dataset(load_config(CONFIG), episodes=1, seed=5)
+    assert observations.shape[0] == actions.shape[0]
+    assert observations.shape[1:] == (12,)
+    assert actions.shape[1:] == (3,)
+    assert np.all(np.abs(actions) <= 1.0)

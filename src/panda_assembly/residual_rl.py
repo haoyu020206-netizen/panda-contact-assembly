@@ -436,6 +436,33 @@ def pose_servo_reference_policy(observation: NDArray[np.float32]) -> NDArray[np.
     return action
 
 
+def collect_reference_dataset(
+    config: ProjectConfig,
+    episodes: int,
+    seed: int | None = None,
+) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+    """Collect privileged pose-reference observations and actions for actor warm-starting."""
+    if episodes <= 0:
+        raise ValueError("episodes must be positive")
+    env = ResidualPegInsertionEnv(config)
+    base_seed = config.residual_rl.seed if seed is None else seed
+    observations: list[NDArray[np.float32]] = []
+    actions: list[NDArray[np.float32]] = []
+    try:
+        for episode in range(episodes):
+            observation, _ = env.reset(seed=base_seed + episode)
+            terminated = False
+            truncated = False
+            while not (terminated or truncated):
+                action = pose_servo_reference_policy(observation)
+                observations.append(observation.copy())
+                actions.append(action.copy())
+                observation, _, terminated, truncated, _ = env.step(action)
+    finally:
+        env.close()
+    return np.asarray(observations, dtype=np.float32), np.asarray(actions, dtype=np.float32)
+
+
 def save_episode_results(results: list[ResidualEpisodeResult], path: Path) -> None:
     import csv
     import json

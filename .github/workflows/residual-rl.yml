@@ -51,6 +51,8 @@ jobs:
           --output residual-rl-results
           --timesteps "${{ inputs.timesteps || '500' }}"
           --evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --bc-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --bc-epochs 20
 
       - name: Upload policy and evaluation
         uses: actions/upload-artifact@v7

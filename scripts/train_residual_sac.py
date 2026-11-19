@@ -9,11 +9,36 @@ import numpy as np
 from panda_assembly.config import load_config
 from panda_assembly.residual_rl import (
     ResidualPegInsertionEnv,
+    collect_reference_dataset,
     evaluate_residual_policy,
     pose_servo_reference_policy,
     save_episode_results,
     zero_residual_policy,
 )
+
+
+def behavior_clone_actor(model, observations, actions, epochs: int, seed: int) -> float:
+    import torch
+
+    generator = torch.Generator(device="cpu").manual_seed(seed)
+    observation_tensor = torch.as_tensor(observations, device=model.device)
+    action_tensor = torch.as_tensor(actions, device=model.device)
+    optimizer = torch.optim.Adam(model.policy.actor.parameters(), lr=1e-3)
+    batch_size = min(256, len(observations))
+    final_loss = 0.0
+    model.policy.actor.set_training_mode(True)
+    for _ in range(epochs):
+        order = torch.randperm(len(observations), generator=generator)
+        for start in range(0, len(observations), batch_size):
+            indices = order[start : start + batch_size].to(model.device)
+            predicted = model.policy.actor(observation_tensor[indices], deterministic=True)
+            loss = torch.nn.functional.mse_loss(predicted, action_tensor[indices])
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            final_loss = float(loss.detach().cpu())
+    model.policy.actor.set_training_mode(False)
+    return final_loss
 
 
 def main() -> None:
@@ -24,10 +49,12 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("runs/residual-sac"))
     parser.add_argument("--timesteps", type=int, default=50_000)
     parser.add_argument("--evaluation-episodes", type=int, default=20)
+    parser.add_argument("--bc-episodes", type=int, default=20)
+    parser.add_argument("--bc-epochs", type=int, default=20)
     parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
-    if args.timesteps <= 0 or args.evaluation_episodes <= 0:
-        raise SystemExit("timesteps and evaluation episodes must be positive")
+    if min(args.timesteps, args.evaluation_episodes, args.bc_episodes, args.bc_epochs) <= 0:
+        raise SystemExit("timesteps, evaluation episodes, and BC settings must be positive")
 
     try:
         from stable_baselines3 import SAC
@@ -62,14 +89,41 @@ def main() -> None:
         seed=seed,
         learning_rate=3e-4,
         buffer_size=max(10_000, args.timesteps),
-        learning_starts=min(1_000, max(100, args.timesteps // 10)),
+        learning_starts=0,
         batch_size=256,
         gamma=0.99,
         train_freq=1,
         gradient_steps=1,
+        ent_coef="auto_0.01",
         policy_kwargs={"net_arch": [128, 128]},
         verbose=1,
     )
+    reference_observations, reference_actions = collect_reference_dataset(
+        config,
+        args.bc_episodes,
+        seed=seed + 10_000,
+    )
+    bc_final_loss = behavior_clone_actor(
+        model,
+        reference_observations,
+        reference_actions,
+        args.bc_epochs,
+        seed,
+    )
+    model.save(args.output / "residual_bc")
+
+    def current_policy(observation: np.ndarray) -> np.ndarray:
+        action, _ = model.predict(observation, deterministic=True)
+        return np.asarray(action, dtype=np.float32)
+
+    behavior_cloned = evaluate_residual_policy(
+        config,
+        current_policy,
+        args.evaluation_episodes,
+        seed=seed,
+    )
+    save_episode_results(behavior_cloned, args.output / "behavior-cloned")
+
     model.learn(total_timesteps=args.timesteps, progress_bar=False)
     model.save(args.output / "residual_sac")
     env.close()
@@ -87,20 +141,28 @@ def main() -> None:
     save_episode_results(learned, args.output / "learned")
 
     baseline_success = sum(result.success for result in baseline) / len(baseline)
+    bc_success = sum(result.success for result in behavior_cloned) / len(behavior_cloned)
     learned_success = sum(result.success for result in learned) / len(learned)
     baseline_safety = sum(result.safety_violation for result in baseline)
+    bc_safety = sum(result.safety_violation for result in behavior_cloned)
     reference_success = sum(result.success for result in pose_reference) / len(pose_reference)
     reference_safety = sum(result.safety_violation for result in pose_reference)
     learned_safety = sum(result.safety_violation for result in learned)
     comparison = {
-        "algorithm": "SAC",
+        "algorithm": "BC+SAC",
         "timesteps": args.timesteps,
         "evaluation_episodes": args.evaluation_episodes,
         "seed": seed,
+        "bc_episodes": args.bc_episodes,
+        "bc_epochs": args.bc_epochs,
+        "bc_samples": len(reference_observations),
+        "bc_final_loss": bc_final_loss,
         "baseline_success_rate": baseline_success,
+        "behavior_cloned_success_rate": bc_success,
         "learned_success_rate": learned_success,
         "success_rate_delta": learned_success - baseline_success,
         "baseline_safety_violations": baseline_safety,
+        "behavior_cloned_safety_violations": bc_safety,
         "pose_reference_success_rate": reference_success,
         "pose_reference_safety_violations": reference_safety,
         "learned_safety_violations": learned_safety,
