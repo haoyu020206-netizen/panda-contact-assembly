@@ -100,6 +100,20 @@ force_rate_limit_n_s = 50000.0
 force_rate_min_force_n = 20.0
 lateral_speed_limit_m_s = 0.020
 
+[residual_rl]
+seed = 20261119
+control_interval_s = 0.020
+episode_duration_s = 10.0
+max_position_offset_m = [0.008, 0.008, 0.003]
+max_position_rate_m_s = [0.020, 0.020, 0.010]
+lateral_offset_limit_m = 0.007
+friction_scale_min = 0.6
+friction_scale_max = 1.4
+tool_mass_scale_min = 0.8
+tool_mass_scale_max = 1.2
+success_bonus = 25.0
+safety_penalty = 25.0
+
 [output]
 root = "runs"
 save_csv = true
