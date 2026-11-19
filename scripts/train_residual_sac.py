@@ -51,14 +51,17 @@ def make_bc_rehearsal_callback(observations, actions, seed: int):
             self.generator = torch.Generator(device="cpu").manual_seed(seed)
             self.observation_tensor = None
             self.action_tensor = None
+            self.optimizer = None
 
         def _on_training_start(self) -> None:
             self.observation_tensor = torch.as_tensor(observations, device=self.model.device)
             self.action_tensor = torch.as_tensor(actions, device=self.model.device)
+            self.optimizer = torch.optim.Adam(self.model.policy.actor.parameters(), lr=3e-4)
 
         def _on_step(self) -> bool:
             assert self.observation_tensor is not None
             assert self.action_tensor is not None
+            assert self.optimizer is not None
             sample_count = min(256, len(observations))
             indices = torch.randint(
                 len(observations),
@@ -68,9 +71,9 @@ def make_bc_rehearsal_callback(observations, actions, seed: int):
             actor = self.model.policy.actor
             predicted = actor(self.observation_tensor[indices], deterministic=True)
             loss = torch.nn.functional.mse_loss(predicted, self.action_tensor[indices])
-            actor.optimizer.zero_grad()
+            self.optimizer.zero_grad()
             loss.backward()
-            actor.optimizer.step()
+            self.optimizer.step()
             self.logger.record("train/bc_rehearsal_loss", float(loss.detach().cpu()))
             return True
 
@@ -123,14 +126,14 @@ def main() -> None:
         "MlpPolicy",
         env,
         seed=seed,
-        learning_rate=3e-5,
+        learning_rate=1e-5,
         buffer_size=max(10_000, args.timesteps),
         learning_starts=0,
         batch_size=256,
         gamma=0.99,
         train_freq=1,
         gradient_steps=1,
-        ent_coef="auto_0.001",
+        ent_coef="auto_0.0001",
         policy_kwargs={"net_arch": [128, 128]},
         verbose=1,
     )
@@ -202,9 +205,9 @@ def main() -> None:
         "bc_epochs": args.bc_epochs,
         "bc_samples": len(reference_observations),
         "bc_final_loss": bc_final_loss,
-        "online_learning_rate": 3e-5,
-        "initial_entropy_coefficient": 0.001,
-        "bc_rehearsal": "one 256-sample teacher batch per environment step",
+        "online_learning_rate": 1e-5,
+        "initial_entropy_coefficient": 0.0001,
+        "bc_rehearsal": "one 256-sample teacher batch per step at 3e-4 learning rate",
         "baseline_success_rate": baseline_success,
         "behavior_cloned_success_rate": bc_success,
         "learned_success_rate": learned_success,
