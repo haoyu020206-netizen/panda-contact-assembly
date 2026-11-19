@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from plot_residual_results import plot_residual_summary
 
 from panda_assembly.config import load_config
 from panda_assembly.residual_rl import (
@@ -221,6 +222,7 @@ def main() -> None:
     }
     with (args.output / "comparison.json").open("w", encoding="utf-8") as handle:
         json.dump(comparison, handle, indent=2)
+    plot_residual_summary(args.output)
     print(json.dumps(comparison, indent=2))
 
 

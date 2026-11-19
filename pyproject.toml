@@ -25,6 +25,7 @@ dev = [
 ]
 rl = [
   "gymnasium>=1.4,<1.5",
+  "matplotlib>=3.8",
   "stable-baselines3>=2.9.2,<2.10",
 ]
 

@@ -6,7 +6,9 @@ on:
       - ".github/workflows/residual-rl.yml"
       - "configs/*.toml"
       - "pyproject.toml"
+      - "scripts/plot_residual_results.py"
       - "scripts/train_residual_sac.py"
+      - "scripts/validate_residual_rl.py"
       - "src/panda_assembly/residual_rl.py"
       - "tests/test_residual_rl.py"
   workflow_dispatch:
@@ -61,3 +63,10 @@ jobs:
           path: residual-rl-results/
           if-no-files-found: error
           retention-days: 30
+
+      - name: Validate paired policy comparison
+        run: >-
+          python scripts/validate_residual_rl.py
+          residual-rl-results
+          --min-evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --require-non-regression
