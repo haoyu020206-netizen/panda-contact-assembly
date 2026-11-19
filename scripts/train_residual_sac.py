@@ -41,6 +41,42 @@ def behavior_clone_actor(model, observations, actions, epochs: int, seed: int) -
     return final_loss
 
 
+def make_bc_rehearsal_callback(observations, actions, seed: int):
+    import torch
+    from stable_baselines3.common.callbacks import BaseCallback
+
+    class BehaviorCloningRehearsalCallback(BaseCallback):
+        def __init__(self) -> None:
+            super().__init__(verbose=0)
+            self.generator = torch.Generator(device="cpu").manual_seed(seed)
+            self.observation_tensor = None
+            self.action_tensor = None
+
+        def _on_training_start(self) -> None:
+            self.observation_tensor = torch.as_tensor(observations, device=self.model.device)
+            self.action_tensor = torch.as_tensor(actions, device=self.model.device)
+
+        def _on_step(self) -> bool:
+            assert self.observation_tensor is not None
+            assert self.action_tensor is not None
+            sample_count = min(256, len(observations))
+            indices = torch.randint(
+                len(observations),
+                (sample_count,),
+                generator=self.generator,
+            ).to(self.model.device)
+            actor = self.model.policy.actor
+            predicted = actor(self.observation_tensor[indices], deterministic=True)
+            loss = torch.nn.functional.mse_loss(predicted, self.action_tensor[indices])
+            actor.optimizer.zero_grad()
+            loss.backward()
+            actor.optimizer.step()
+            self.logger.record("train/bc_rehearsal_loss", float(loss.detach().cpu()))
+            return True
+
+    return BehaviorCloningRehearsalCallback()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Train and evaluate a bounded SAC residual on impedance insertion."
@@ -87,14 +123,14 @@ def main() -> None:
         "MlpPolicy",
         env,
         seed=seed,
-        learning_rate=3e-4,
+        learning_rate=3e-5,
         buffer_size=max(10_000, args.timesteps),
         learning_starts=0,
         batch_size=256,
         gamma=0.99,
         train_freq=1,
         gradient_steps=1,
-        ent_coef="auto_0.01",
+        ent_coef="auto_0.001",
         policy_kwargs={"net_arch": [128, 128]},
         verbose=1,
     )
@@ -124,7 +160,16 @@ def main() -> None:
     )
     save_episode_results(behavior_cloned, args.output / "behavior-cloned")
 
-    model.learn(total_timesteps=args.timesteps, progress_bar=False)
+    rehearsal_callback = make_bc_rehearsal_callback(
+        reference_observations,
+        reference_actions,
+        seed,
+    )
+    model.learn(
+        total_timesteps=args.timesteps,
+        callback=rehearsal_callback,
+        progress_bar=False,
+    )
     model.save(args.output / "residual_sac")
     env.close()
 
@@ -157,6 +202,9 @@ def main() -> None:
         "bc_epochs": args.bc_epochs,
         "bc_samples": len(reference_observations),
         "bc_final_loss": bc_final_loss,
+        "online_learning_rate": 3e-5,
+        "initial_entropy_coefficient": 0.001,
+        "bc_rehearsal": "one 256-sample teacher batch per environment step",
         "baseline_success_rate": baseline_success,
         "behavior_cloned_success_rate": bc_success,
         "learned_success_rate": learned_success,
