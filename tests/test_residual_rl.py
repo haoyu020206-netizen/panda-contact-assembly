@@ -6,7 +6,11 @@ import pytest
 from gymnasium.utils.env_checker import check_env
 
 from panda_assembly.config import load_config
-from panda_assembly.residual_rl import ResidualActionFilter, ResidualPegInsertionEnv
+from panda_assembly.residual_rl import (
+    ResidualActionFilter,
+    ResidualPegInsertionEnv,
+    pose_servo_reference_policy,
+)
 
 CONFIG = Path(__file__).parents[1] / "configs" / "mvp.toml"
 
@@ -47,6 +51,13 @@ def test_residual_environment_rejects_out_of_shape_action() -> None:
     action_filter = ResidualActionFilter(np.ones(3), np.ones(3))
     with pytest.raises(ValueError, match="shape"):
         action_filter.command(np.ones(2), 0.02, True)
+
+
+def test_pose_servo_reference_maps_relative_error_to_bounded_offset() -> None:
+    observation = np.zeros(12, dtype=np.float32)
+    observation[:2] = [0.5, -1.0]
+    action = pose_servo_reference_policy(observation)
+    np.testing.assert_allclose(action, [0.75, -1.0, 0.0])
 
 
 def test_action_and_observation_spaces_are_bounded() -> None:

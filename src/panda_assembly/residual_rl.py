@@ -29,7 +29,7 @@ Policy = Callable[[NDArray[np.float32]], NDArray[np.float32]]
 
 @dataclass
 class ResidualActionFilter:
-    """Integrate bounded normalized velocity actions into a smooth target offset."""
+    """Rate-limit bounded normalized target-offset actions."""
 
     max_offset_m: FloatArray
     max_rate_m_s: FloatArray
@@ -48,7 +48,9 @@ class ResidualActionFilter:
         normalized = np.clip(np.asarray(action, dtype=float), -1.0, 1.0)
         if normalized.shape != (3,):
             raise ValueError(f"residual action must have shape (3,), got {normalized.shape}")
-        self.offset_m += normalized * self.max_rate_m_s * interval_s
+        desired_offset = normalized * self.max_offset_m
+        maximum_step = self.max_rate_m_s * interval_s
+        self.offset_m += np.clip(desired_offset - self.offset_m, -maximum_step, maximum_step)
         self.offset_m[:] = np.clip(self.offset_m, -self.max_offset_m, self.max_offset_m)
         return self.offset_m.copy()
 
@@ -68,6 +70,9 @@ class ResidualEpisodeResult:
     lateral_offset_y: float
     friction_scale: float
     tool_mass_scale: float
+    final_residual_x_m: float
+    final_residual_y_m: float
+    final_residual_z_m: float
 
 
 class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
@@ -331,6 +336,7 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         reward = (
             2.0 * xy_progress
             + 5.0 * depth_progress
+            - 0.01 * min((xy_error / self.config.peg_task.clearance) ** 2, 9.0)
             - 0.02 * force_ratio * force_ratio
             - 0.002 * float(np.dot(action, action))
             - 0.001
@@ -343,6 +349,15 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         self.previous_depth_m = depth
         terminated = success or safety_violation
         truncated = bool(not terminated and self.data.time >= self.rl.episode_duration_s)
+        if truncated:
+            remaining_depth = max(
+                0.0,
+                self.config.peg_task.insertion_depth - depth,
+            )
+            reward -= 5.0 * (
+                xy_error / self.config.peg_task.clearance
+                + remaining_depth / self.config.peg_task.insertion_depth
+            )
         self.episode_done = terminated or truncated
         return (
             self._observation(),
@@ -398,6 +413,9 @@ def evaluate_residual_policy(
                     lateral_offset_y=float(info["lateral_offset_y"]),
                     friction_scale=float(info["friction_scale"]),
                     tool_mass_scale=float(info["tool_mass_scale"]),
+                    final_residual_x_m=float(info["residual_offset_m"][0]),
+                    final_residual_y_m=float(info["residual_offset_m"][1]),
+                    final_residual_z_m=float(info["residual_offset_m"][2]),
                 )
             )
     finally:
@@ -408,6 +426,14 @@ def evaluate_residual_policy(
 def zero_residual_policy(observation: NDArray[np.float32]) -> NDArray[np.float32]:
     del observation
     return np.zeros(3, dtype=np.float32)
+
+
+def pose_servo_reference_policy(observation: NDArray[np.float32]) -> NDArray[np.float32]:
+    """Privileged pose-servo reference used only to sanity-check environment solvability."""
+    relative_xy_m = observation[:2].astype(float) * 0.012
+    action = np.zeros(3, dtype=np.float32)
+    action[:2] = np.clip(relative_xy_m / 0.008, -1.0, 1.0)
+    return action
 
 
 def save_episode_results(results: list[ResidualEpisodeResult], path: Path) -> None:

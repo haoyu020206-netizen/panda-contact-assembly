@@ -10,6 +10,7 @@ from panda_assembly.config import load_config
 from panda_assembly.residual_rl import (
     ResidualPegInsertionEnv,
     evaluate_residual_policy,
+    pose_servo_reference_policy,
     save_episode_results,
     zero_residual_policy,
 )
@@ -45,6 +46,13 @@ def main() -> None:
         seed=seed,
     )
     save_episode_results(baseline, args.output / "baseline")
+    pose_reference = evaluate_residual_policy(
+        config,
+        pose_servo_reference_policy,
+        args.evaluation_episodes,
+        seed=seed,
+    )
+    save_episode_results(pose_reference, args.output / "pose-reference")
 
     env = ResidualPegInsertionEnv(config)
     check_env(env, warn=True, skip_render_check=True)
@@ -81,6 +89,8 @@ def main() -> None:
     baseline_success = sum(result.success for result in baseline) / len(baseline)
     learned_success = sum(result.success for result in learned) / len(learned)
     baseline_safety = sum(result.safety_violation for result in baseline)
+    reference_success = sum(result.success for result in pose_reference) / len(pose_reference)
+    reference_safety = sum(result.safety_violation for result in pose_reference)
     learned_safety = sum(result.safety_violation for result in learned)
     comparison = {
         "algorithm": "SAC",
@@ -91,6 +101,8 @@ def main() -> None:
         "learned_success_rate": learned_success,
         "success_rate_delta": learned_success - baseline_success,
         "baseline_safety_violations": baseline_safety,
+        "pose_reference_success_rate": reference_success,
+        "pose_reference_safety_violations": reference_safety,
         "learned_safety_violations": learned_safety,
         "non_regression": learned_success >= baseline_success and learned_safety <= baseline_safety,
     }

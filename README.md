@@ -174,6 +174,21 @@ The predictive layer queries signed peg-to-wall geometry distance every 2 ms and
 
 The diagonal impedance case falls by **95.3%** and finishes below the exploratory 200 N force limit. Both nominal controllers preserve task success without a predictive trigger. Cases outside the recovery envelope are explicitly classified as `safe_reject` only after they end above the hole, below the force limit, and with released contact. The benchmark is enforced by nine executable CI acceptance checks rather than treated as a demonstration-only plot. Evidence comes from [GitHub Actions run 44418587196](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44418587196).
 
+## Residual reinforcement learning
+
+The learning environment keeps Cartesian impedance control as the nominal policy and exposes only a bounded 3-D target-offset residual at 50 Hz. Requested offsets are rate-limited and capped at 8 mm laterally and 3 mm axially. The policy cannot change impedance gains, orientation control, actuator limits, or the 200 N force termination.
+
+The 12-D observation contains actual hole-relative tip position, tip velocity, contact force, peg-to-wall proximity, episode phase, and the current residual. Reset randomization covers ±7 mm lateral fixture error, 0.6–1.4× friction, and 0.8–1.2× tool mass. Actual hole-relative position is privileged simulation state in this MVP and represents a future vision or pose-estimation input; it must not be described as directly available on hardware.
+
+Install the optional training stack and run a paired SAC experiment:
+
+```powershell
+python -m pip install -e ".[rl]"
+python scripts\train_residual_sac.py --config configs\mvp.toml --timesteps 50000 --evaluation-episodes 20 --output runs\residual_sac
+```
+
+The script first evaluates a zero-residual impedance baseline, trains SAC, then evaluates both policies on identical seeded disturbances. It writes the model, per-episode CSV files, summaries, and `comparison.json`. The manual **Residual RL Training** GitHub Actions workflow provides the same path without a local PyTorch/MuJoCo installation. A 500-step PR smoke run verifies API compatibility and artifact creation but is intentionally not treated as learning evidence.
+
 ## 已实现
 
 - 自带无网格依赖的 7-DoF Panda 风格 MJCF，可立即验证控制代码；
@@ -191,6 +206,8 @@ The diagonal impedance case falls by **95.3%** and finishes below the explorator
 - 12 组无保护/分层恢复对照，以及由 7 条任务级指标约束的 CI 验收；
 - 基于孔壁有符号距离、最近点方向和横向投影间隙的预测式碰撞保护；
 - 12 组反应式/预测式对照、安全拒绝分类，以及预测冲击 CI 硬门禁；
+- Gymnasium 残差策略环境、受限笛卡尔动作、域随机化和成对策略评估；
+- 可选 Stable-Baselines3 SAC 训练脚本与独立云端训练工作流；
 - 正常成功、危险成功、安全中止、卡住、偏孔和深度不足的失败类型统计；
 - 方孔插入任务、接触力读取和成功判据；
 - 孔位、摩擦和工具质量扰动的批量实验；

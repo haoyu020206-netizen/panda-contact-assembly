@@ -111,8 +111,8 @@ friction_scale_min = 0.6
 friction_scale_max = 1.4
 tool_mass_scale_min = 0.8
 tool_mass_scale_max = 1.2
-success_bonus = 25.0
-safety_penalty = 25.0
+success_bonus = 40.0
+safety_penalty = 50.0
 
 [output]
 root = "runs"
