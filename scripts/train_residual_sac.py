@@ -91,6 +91,12 @@ def main() -> None:
     parser.add_argument("--evaluation-episodes", type=int, default=20)
     parser.add_argument("--bc-episodes", type=int, default=20)
     parser.add_argument("--bc-epochs", type=int, default=20)
+    parser.add_argument(
+        "--rehearsal-mode",
+        choices=("teacher", "none"),
+        default="teacher",
+        help="Keep rehearsing pose-reference demonstrations during SAC, or disable rehearsal.",
+    )
     parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
     if min(args.timesteps, args.evaluation_episodes, args.bc_episodes, args.bc_epochs) <= 0:
@@ -164,11 +170,13 @@ def main() -> None:
     )
     save_episode_results(behavior_cloned, args.output / "behavior-cloned")
 
-    rehearsal_callback = make_bc_rehearsal_callback(
-        reference_observations,
-        reference_actions,
-        seed,
-    )
+    rehearsal_callback = None
+    if args.rehearsal_mode == "teacher":
+        rehearsal_callback = make_bc_rehearsal_callback(
+            reference_observations,
+            reference_actions,
+            seed,
+        )
     model.learn(
         total_timesteps=args.timesteps,
         callback=rehearsal_callback,
@@ -199,6 +207,7 @@ def main() -> None:
     learned_safety = sum(result.safety_violation for result in learned)
     comparison = {
         "algorithm": "BC+SAC",
+        "rehearsal_mode": args.rehearsal_mode,
         "timesteps": args.timesteps,
         "evaluation_episodes": args.evaluation_episodes,
         "seed": seed,
@@ -208,7 +217,11 @@ def main() -> None:
         "bc_final_loss": bc_final_loss,
         "online_learning_rate": 1e-5,
         "initial_entropy_coefficient": 0.0001,
-        "bc_rehearsal": "one 256-sample teacher batch per step at 3e-4 learning rate",
+        "bc_rehearsal": (
+            "one 256-sample teacher batch per step at 3e-4 learning rate"
+            if args.rehearsal_mode == "teacher"
+            else "disabled"
+        ),
         "baseline_success_rate": baseline_success,
         "behavior_cloned_success_rate": bc_success,
         "learned_success_rate": learned_success,

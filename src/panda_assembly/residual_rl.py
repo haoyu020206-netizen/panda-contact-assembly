@@ -78,8 +78,9 @@ class ResidualEpisodeResult:
 class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
     """Residual Cartesian target learning on top of the impedance controller.
 
-    The policy commands a bounded residual velocity. It cannot change impedance gains,
-    orientation control, actuator limits, the force termination, or the nominal trajectory.
+    The policy commands a bounded target-position offset with an independent rate limiter.
+    It cannot change impedance gains, orientation control, actuator limits, the force
+    termination, or the nominal trajectory.
     """
 
     metadata = {"render_modes": []}
