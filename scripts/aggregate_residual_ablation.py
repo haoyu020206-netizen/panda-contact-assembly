@@ -184,7 +184,7 @@ def plot_summary(aggregate: dict, path: Path) -> None:
         axis.set_ylabel(unit)
         axis.grid(axis="y", alpha=0.25)
         axis.tick_params(axis="x", rotation=24)
-        upper = max(values) * 1.2 + (2.0 if unit == "%" else 0.5)
+        upper = 105.0 if unit == "%" else max(values) * 1.2 + 0.5
         axis.set_ylim(0.0, max(upper, 1.0))
         for bar, value in zip(bars, values, strict=True):
             label = f"{value:.0f}" if unit in {"%", "episodes"} else f"{value:.1f}"
