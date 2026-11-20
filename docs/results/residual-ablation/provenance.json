@@ -1,0 +1,12 @@
+{
+  "github_actions_run": 44813895625,
+  "run_url": "https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44813895625",
+  "source_commit": "b730e503b2b00e8e3df51979eb70078e8122bc9c",
+  "branch": "codex/residual-ablation",
+  "runner": "ubuntu-latest",
+  "python": "3.12",
+  "config": "configs/mvp.toml",
+  "seeds": [20261119, 20261120, 20261121],
+  "timesteps_per_run": 10000,
+  "evaluation_episodes_per_policy_and_run": 20
+}

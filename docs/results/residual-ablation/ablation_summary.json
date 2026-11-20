@@ -1,0 +1,325 @@
+{
+  "seeds": [
+    20261119,
+    20261120,
+    20261121
+  ],
+  "run_count": 6,
+  "timesteps": [
+    10000
+  ],
+  "evaluation_episodes": [
+    20
+  ],
+  "policies": [
+    {
+      "policy": "baseline",
+      "seeds": 3,
+      "episodes": 60,
+      "successes": 25,
+      "success_rate": 0.4166666666666667,
+      "success_rate_seed_mean": 0.4166666666666667,
+      "success_rate_seed_std": 0.02886751345948128,
+      "safety_violations": 32,
+      "mean_peak_force_n": 208.08396446274074
+    },
+    {
+      "policy": "behavior_cloned",
+      "seeds": 3,
+      "episodes": 60,
+      "successes": 58,
+      "success_rate": 0.9666666666666667,
+      "success_rate_seed_mean": 0.9666666666666667,
+      "success_rate_seed_std": 0.028867513459481315,
+      "safety_violations": 2,
+      "mean_peak_force_n": 10.174032210805823
+    },
+    {
+      "policy": "learned_none",
+      "seeds": 3,
+      "episodes": 60,
+      "successes": 14,
+      "success_rate": 0.23333333333333334,
+      "success_rate_seed_mean": 0.2333333333333333,
+      "success_rate_seed_std": 0.028867513459481284,
+      "safety_violations": 43,
+      "mean_peak_force_n": 180.41924532304785
+    },
+    {
+      "policy": "learned_teacher",
+      "seeds": 3,
+      "episodes": 60,
+      "successes": 60,
+      "success_rate": 1.0,
+      "success_rate_seed_mean": 1.0,
+      "success_rate_seed_std": 0.0,
+      "safety_violations": 0,
+      "mean_peak_force_n": 3.7023985355030926
+    },
+    {
+      "policy": "pose_reference",
+      "seeds": 3,
+      "episodes": 60,
+      "successes": 60,
+      "success_rate": 1.0,
+      "success_rate_seed_mean": 1.0,
+      "success_rate_seed_std": 0.0,
+      "safety_violations": 0,
+      "mean_peak_force_n": 4.505971728818927
+    }
+  ],
+  "runs": [
+    {
+      "seed": 20261119,
+      "rehearsal_mode": "none",
+      "timesteps": 10000,
+      "evaluation_episodes": 20,
+      "non_regression": false,
+      "summaries": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 9,
+          "success_rate": 0.45,
+          "safety_violations": 10,
+          "mean_peak_force_n": 199.59033582971125,
+          "mean_reward": 13.925449432526511
+        },
+        "behavior-cloned": {
+          "episodes": 20,
+          "successes": 19,
+          "success_rate": 0.95,
+          "safety_violations": 1,
+          "mean_peak_force_n": 12.94118430553553,
+          "mean_reward": 65.96078469063906
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 4,
+          "success_rate": 0.2,
+          "safety_violations": 14,
+          "mean_peak_force_n": 170.7640348547767,
+          "mean_reward": -20.37290530162197
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 4.5053962950961,
+          "mean_reward": 70.80580820341312
+        }
+      },
+      "source": "downloaded-results/residual-ablation-none-20261119/comparison.json"
+    },
+    {
+      "seed": 20261120,
+      "rehearsal_mode": "none",
+      "timesteps": 10000,
+      "evaluation_episodes": 20,
+      "non_regression": false,
+      "summaries": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 8,
+          "success_rate": 0.4,
+          "safety_violations": 11,
+          "mean_peak_force_n": 212.33343590994224,
+          "mean_reward": 9.35931696925222
+        },
+        "behavior-cloned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 4.256928231865524,
+          "mean_reward": 70.77207963147667
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 5,
+          "success_rate": 0.25,
+          "safety_violations": 14,
+          "mean_peak_force_n": 187.29860093930773,
+          "mean_reward": -13.373854306237126
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 4.505971728818928,
+          "mean_reward": 70.8416816076768
+        }
+      },
+      "source": "downloaded-results/residual-ablation-none-20261120/comparison.json"
+    },
+    {
+      "seed": 20261121,
+      "rehearsal_mode": "none",
+      "timesteps": 10000,
+      "evaluation_episodes": 20,
+      "non_regression": false,
+      "summaries": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 8,
+          "success_rate": 0.4,
+          "safety_violations": 11,
+          "mean_peak_force_n": 212.3281216485538,
+          "mean_reward": 9.413985461947387
+        },
+        "behavior-cloned": {
+          "episodes": 20,
+          "successes": 19,
+          "success_rate": 0.95,
+          "safety_violations": 1,
+          "mean_peak_force_n": 13.32398409501767,
+          "mean_reward": 65.95830408074437
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 5,
+          "success_rate": 0.25,
+          "safety_violations": 15,
+          "mean_peak_force_n": 183.19510017505903,
+          "mean_reward": -8.622856474524124
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 4.505971728818928,
+          "mean_reward": 70.8515058587086
+        }
+      },
+      "source": "downloaded-results/residual-ablation-none-20261121/comparison.json"
+    },
+    {
+      "seed": 20261119,
+      "rehearsal_mode": "teacher",
+      "timesteps": 10000,
+      "evaluation_episodes": 20,
+      "non_regression": true,
+      "summaries": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 9,
+          "success_rate": 0.45,
+          "safety_violations": 10,
+          "mean_peak_force_n": 199.59033582972614,
+          "mean_reward": 13.92546194240784
+        },
+        "behavior-cloned": {
+          "episodes": 20,
+          "successes": 19,
+          "success_rate": 0.95,
+          "safety_violations": 1,
+          "mean_peak_force_n": 12.941184305534279,
+          "mean_reward": 65.96078469063904
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 6.453695487860372,
+          "mean_reward": 70.80841634610238
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 4.505971728818928,
+          "mean_reward": 70.80571218117467
+        }
+      },
+      "source": "downloaded-results/residual-ablation-teacher-20261119/comparison.json"
+    },
+    {
+      "seed": 20261120,
+      "rehearsal_mode": "teacher",
+      "timesteps": 10000,
+      "evaluation_episodes": 20,
+      "non_regression": true,
+      "summaries": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 8,
+          "success_rate": 0.4,
+          "safety_violations": 11,
+          "mean_peak_force_n": 212.33343590994224,
+          "mean_reward": 9.35931696925222
+        },
+        "behavior-cloned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 4.256928231865524,
+          "mean_reward": 70.77207963147667
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 2.2788987790272257,
+          "mean_reward": 70.84125502105137
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 4.505971728818928,
+          "mean_reward": 70.8416816076768
+        }
+      },
+      "source": "downloaded-results/residual-ablation-teacher-20261120/comparison.json"
+    },
+    {
+      "seed": 20261121,
+      "rehearsal_mode": "teacher",
+      "timesteps": 10000,
+      "evaluation_episodes": 20,
+      "non_regression": true,
+      "summaries": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 8,
+          "success_rate": 0.4,
+          "safety_violations": 11,
+          "mean_peak_force_n": 212.3281216485538,
+          "mean_reward": 9.413985461947387
+        },
+        "behavior-cloned": {
+          "episodes": 20,
+          "successes": 19,
+          "success_rate": 0.95,
+          "safety_violations": 1,
+          "mean_peak_force_n": 13.32398409501767,
+          "mean_reward": 65.95830408074437
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 2.37460133962168,
+          "mean_reward": 70.87243647964036
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 4.505971728818928,
+          "mean_reward": 70.8515058587086
+        }
+      },
+      "source": "downloaded-results/residual-ablation-teacher-20261121/comparison.json"
+    }
+  ]
+}

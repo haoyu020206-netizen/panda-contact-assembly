@@ -1,0 +1,115 @@
+name: Residual RL Multi-Seed Ablation
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/residual-ablation.yml"
+      - "pyproject.toml"
+      - "scripts/aggregate_residual_ablation.py"
+      - "scripts/train_residual_sac.py"
+      - "scripts/validate_residual_ablation.py"
+      - "src/panda_assembly/residual_rl.py"
+      - "tests/test_residual_ablation.py"
+  workflow_dispatch:
+    inputs:
+      timesteps:
+        description: SAC environment steps per run
+        required: true
+        default: "10000"
+        type: string
+      evaluation_episodes:
+        description: Paired evaluation episodes per policy and run
+        required: true
+        default: "20"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  train:
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [20261119, 20261120, 20261121]
+        rehearsal: [none, teacher]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install residual RL dependencies
+        run: python -m pip install -e ".[rl]"
+
+      - name: Train seeded ablation
+        run: >-
+          python scripts/train_residual_sac.py
+          --config configs/mvp.toml
+          --output ablation-result
+          --timesteps "${{ inputs.timesteps || '500' }}"
+          --evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --bc-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --bc-epochs 20
+          --seed "${{ matrix.seed }}"
+          --rehearsal-mode "${{ matrix.rehearsal }}"
+
+      - name: Upload seeded result
+        uses: actions/upload-artifact@v7
+        with:
+          name: residual-ablation-${{ matrix.rehearsal }}-${{ matrix.seed }}
+          path: ablation-result/
+          if-no-files-found: error
+          retention-days: 30
+
+  aggregate:
+    needs: train
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install plotting dependencies
+        run: python -m pip install -e ".[plot]"
+
+      - name: Download seeded results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: residual-ablation-*
+          path: downloaded-results
+
+      - name: Aggregate ablation
+        run: >-
+          python scripts/aggregate_residual_ablation.py
+          downloaded-results
+          --output residual-ablation-summary
+
+      - name: Validate ablation structure
+        run: >-
+          python scripts/validate_residual_ablation.py
+          residual-ablation-summary/ablation_summary.json
+          --min-seeds 3
+          --min-evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --require-teacher-non-regression
+
+      - name: Upload ablation summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: residual-ablation-summary
+          path: residual-ablation-summary/
+          if-no-files-found: error
+          retention-days: 30
