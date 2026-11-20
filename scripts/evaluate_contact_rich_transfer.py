@@ -76,7 +76,7 @@ def plot_contact_rich(summary: dict, output: Path) -> None:
         0.01,
         (
             f"seed={summary['seed']} | {summary['episodes']} paired episodes/condition | "
-            "1 mm radial clearance | simulated forces"
+            "tight-clearance transfer | simulated forces"
         ),
         ha="center",
         fontsize=9,
@@ -96,13 +96,14 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("runs/contact-rich-transfer"))
     parser.add_argument("--episodes", type=int, default=20)
     parser.add_argument("--seed", type=int)
-    parser.add_argument("--socket-clearance-m", type=float, default=0.001)
-    parser.add_argument("--bias-x-m", type=float, default=0.002)
-    parser.add_argument("--bias-y-m", type=float, default=-0.002)
+    parser.add_argument("--socket-clearance-m", type=float, default=0.002)
+    parser.add_argument("--bias-x-m", type=float, default=0.003)
+    parser.add_argument("--bias-y-m", type=float, default=-0.003)
     parser.add_argument("--contact-force-n", type=float, default=1.0)
     parser.add_argument("--search-trigger-force-n", type=float, default=5.0)
     parser.add_argument("--search-radius-m", type=float, default=0.007)
-    parser.add_argument("--episode-duration-s", type=float, default=14.0)
+    parser.add_argument("--episode-duration-s", type=float, default=18.0)
+    parser.add_argument("--insert-time-s", type=float, default=12.0)
     args = parser.parse_args()
     if args.episodes <= 0:
         raise SystemExit("episodes must be positive")
@@ -110,6 +111,8 @@ def main() -> None:
         raise SystemExit("socket clearance must be positive")
     if args.episode_duration_s <= 0.0:
         raise SystemExit("episode duration must be positive")
+    if args.insert_time_s <= 0.0:
+        raise SystemExit("insert time must be positive")
 
     try:
         from stable_baselines3 import SAC
@@ -119,8 +122,16 @@ def main() -> None:
         ) from error
 
     config = load_config(args.config)
+    if args.insert_time_s <= config.peg_task.align_time:
+        raise SystemExit("insert time must be later than align time")
+    if args.episode_duration_s <= args.insert_time_s:
+        raise SystemExit("episode duration must be later than insert time")
     config = replace(
         config,
+        peg_task=replace(
+            config.peg_task,
+            insert_time=args.insert_time_s,
+        ),
         residual_rl=replace(
             config.residual_rl,
             episode_duration_s=args.episode_duration_s,
@@ -146,10 +157,15 @@ def main() -> None:
 
     conditions = (
         ("wide-clean", "5 mm clean", None, np.zeros(3)),
-        ("narrow-clean", "1 mm clean", args.socket_clearance_m, np.zeros(3)),
+        (
+            "narrow-clean",
+            f"{args.socket_clearance_m * 1000:.0f} mm clean",
+            args.socket_clearance_m,
+            np.zeros(3),
+        ),
         (
             "narrow-biased",
-            "1 mm + pose bias",
+            f"{args.socket_clearance_m * 1000:.0f} mm + pose bias",
             args.socket_clearance_m,
             np.array([args.bias_x_m, args.bias_y_m, 0.0]),
         ),
@@ -198,6 +214,8 @@ def main() -> None:
             "radius_m": args.search_radius_m,
             "entry_depth_m": config.contact_recovery.entry_depth_m,
         },
+        "insert_time_s": args.insert_time_s,
+        "episode_duration_s": args.episode_duration_s,
         "conditions": condition_summaries,
     }
     with (args.output / "contact_rich_summary.json").open("w", encoding="utf-8") as handle:
