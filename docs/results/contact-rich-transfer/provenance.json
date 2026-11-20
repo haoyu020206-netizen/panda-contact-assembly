@@ -1,0 +1,22 @@
+{
+  "github_actions_run": 44827694641,
+  "run_url": "https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44827694641",
+  "source_commit": "d4884369cea5b614258e06d98061564a1432e992",
+  "branch": "codex/contact-rich-transfer",
+  "runner": "ubuntu-latest",
+  "python": "3.12",
+  "source_config": "configs/mvp.toml",
+  "target_config": "configs/menagerie.toml",
+  "timesteps": 10000,
+  "evaluation_episodes_per_condition_and_policy": 20,
+  "seed": 20261119,
+  "narrow_socket_clearance_m": 0.003,
+  "biased_observation_position_m": [0.004, -0.004, 0.0],
+  "insert_time_s": 12.0,
+  "episode_duration_s": 18.0,
+  "artifact_name": "contact-rich-transfer-results",
+  "calibration_runs": {
+    "one_mm_rejected_unsafe": 44825444922,
+    "two_mm_rejected_unrecoverable_smoke": 44826837048
+  }
+}

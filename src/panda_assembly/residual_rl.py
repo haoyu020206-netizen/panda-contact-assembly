@@ -73,6 +73,23 @@ class ResidualEpisodeResult:
     final_residual_x_m: float
     final_residual_y_m: float
     final_residual_z_m: float
+    contact_occurred: bool
+    contact_steps: int
+    first_contact_time_s: float | None
+    search_triggered: bool
+    recovery_success: bool
+
+
+def socket_wall_center_m(
+    peg_radius_m: float,
+    radial_clearance_m: float,
+    wall_half_thickness_m: float,
+) -> float:
+    """Return the positive wall center for a requested radial peg clearance."""
+    values = (peg_radius_m, radial_clearance_m, wall_half_thickness_m)
+    if not all(np.isfinite(value) and value > 0.0 for value in values):
+        raise ValueError("peg radius, radial clearance, and wall half-thickness must be positive")
+    return peg_radius_m + radial_clearance_m + wall_half_thickness_m
 
 
 class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
@@ -91,6 +108,8 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         *,
         observation_position_noise_std_m: FloatArray | None = None,
         observation_position_bias_m: FloatArray | None = None,
+        socket_clearance_m: float | None = None,
+        contact_detection_force_n: float = 1.0,
     ) -> None:
         super().__init__()
         self.config = config
@@ -104,19 +123,32 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
             observation_position_bias_m,
             "observation_position_bias_m",
         )
+        if socket_clearance_m is not None and (
+            not np.isfinite(socket_clearance_m) or socket_clearance_m <= 0.0
+        ):
+            raise ValueError("socket_clearance_m must be positive and finite")
+        if not np.isfinite(contact_detection_force_n) or contact_detection_force_n <= 0.0:
+            raise ValueError("contact_detection_force_n must be positive and finite")
+        self.contact_detection_force_n = float(contact_detection_force_n)
         self.model = load_model(
             timestep=config.simulation.timestep,
             variant=config.model.variant,
         )
         self.data = mujoco.MjData(self.model)
-        reset_to_home(self.model, self.data)
         self.tool_body_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "tool")
         self.base_tool_mass = float(self.model.body_mass[self.tool_body_id])
         self.tip_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "peg_tip")
+        peg_geom_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "peg_geom")
         self.socket_wall_geom_ids = tuple(
             mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, name)
             for name in ("socket_x_pos", "socket_x_neg", "socket_y_pos", "socket_y_neg")
         )
+        self.socket_clearance_m = self._configure_socket_clearance(
+            peg_geom_id,
+            socket_clearance_m,
+        )
+        self.success_clearance_m = min(config.peg_task.clearance, self.socket_clearance_m)
+        reset_to_home(self.model, self.data)
         self.action_repeat = round(self.rl.control_interval_s / self.model.opt.timestep)
         self.action_space = spaces.Box(-1.0, 1.0, shape=(3,), dtype=np.float32)
         self.observation_space = spaces.Box(-5.0, 5.0, shape=(12,), dtype=np.float32)
@@ -138,8 +170,47 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         self.previous_xy_error_m = 0.0
         self.previous_depth_m = 0.0
         self.maximum_force_n = 0.0
+        self.contact_steps = 0
+        self.first_contact_time_s: float | None = None
         self.completion_time_s: float | None = None
         self.episode_done = False
+
+    def _configure_socket_clearance(
+        self,
+        peg_geom_id: int,
+        requested_clearance_m: float | None,
+    ) -> float:
+        peg_radius_m = float(self.model.geom_size[peg_geom_id, 0])
+        axes = (0, 0, 1, 1)
+        signs = (1.0, -1.0, 1.0, -1.0)
+        current_clearances = []
+        for geom_id, axis in zip(self.socket_wall_geom_ids, axes, strict=True):
+            inner_face_m = abs(float(self.model.geom_pos[geom_id, axis])) - float(
+                self.model.geom_size[geom_id, axis]
+            )
+            current_clearances.append(inner_face_m - peg_radius_m)
+        clearance_m = (
+            float(min(current_clearances))
+            if requested_clearance_m is None
+            else float(requested_clearance_m)
+        )
+        if clearance_m <= 0.0:
+            raise ValueError("socket geometry must have positive radial clearance")
+        if requested_clearance_m is not None:
+            for geom_id, axis, sign in zip(
+                self.socket_wall_geom_ids,
+                axes,
+                signs,
+                strict=True,
+            ):
+                half_thickness_m = float(self.model.geom_size[geom_id, axis])
+                self.model.geom_pos[geom_id, axis] = sign * socket_wall_center_m(
+                    peg_radius_m,
+                    clearance_m,
+                    half_thickness_m,
+                )
+            mujoco.mj_setConst(self.model, self.data)
+        return clearance_m
 
     @staticmethod
     def _observation_vector(
@@ -300,6 +371,10 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
             "xy_error_m": xy_error_m,
             "insertion_depth_m": depth_m,
             "completion_time_s": self.completion_time_s,
+            "socket_clearance_m": self.socket_clearance_m,
+            "contact_occurred": self.first_contact_time_s is not None,
+            "contact_steps": self.contact_steps,
+            "first_contact_time_s": self.first_contact_time_s,
             "residual_offset_m": self.action_filter.offset_m.copy().tolist()
             if self.action_filter.offset_m is not None
             else [0.0, 0.0, 0.0],
@@ -317,6 +392,8 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         self._configure_episode()
         self.action_filter.reset()
         self.maximum_force_n = 0.0
+        self.contact_steps = 0
+        self.first_contact_time_s = None
         self.completion_time_s = None
         self.episode_done = False
         xy_error, depth, force, _ = self._metrics()
@@ -357,8 +434,12 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
             mujoco.mj_step(self.model, self.data)
             xy_error, depth, force, _ = self._metrics()
             self.maximum_force_n = max(self.maximum_force_n, force)
+            if force >= self.contact_detection_force_n:
+                self.contact_steps += 1
+                if self.first_contact_time_s is None:
+                    self.first_contact_time_s = float(self.data.time)
             geometric_success = bool(
-                xy_error <= self.config.peg_task.clearance
+                xy_error <= self.success_clearance_m
                 and depth >= self.config.peg_task.insertion_depth
             )
             safety_violation = force >= self.config.force_safety.force_limit_n
@@ -368,13 +449,13 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
             if success or safety_violation or self.data.time >= self.rl.episode_duration_s:
                 break
 
-        xy_progress = (self.previous_xy_error_m - xy_error) / self.config.peg_task.clearance
+        xy_progress = (self.previous_xy_error_m - xy_error) / self.success_clearance_m
         depth_progress = (depth - self.previous_depth_m) / self.config.peg_task.insertion_depth
         force_ratio = force / self.config.force_safety.force_limit_n
         reward = (
             2.0 * xy_progress
             + 5.0 * depth_progress
-            - 0.01 * min((xy_error / self.config.peg_task.clearance) ** 2, 9.0)
+            - 0.01 * min((xy_error / self.success_clearance_m) ** 2, 9.0)
             - 0.02 * force_ratio * force_ratio
             - 0.002 * float(np.dot(action, action))
             - 0.001
@@ -393,7 +474,7 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
                 self.config.peg_task.insertion_depth - depth,
             )
             reward -= 5.0 * (
-                xy_error / self.config.peg_task.clearance
+                xy_error / self.success_clearance_m
                 + remaining_depth / self.config.peg_task.insertion_depth
             )
         self.episode_done = terminated or truncated
@@ -420,6 +501,8 @@ def evaluate_residual_policy(
     *,
     observation_position_noise_std_m: FloatArray | None = None,
     observation_position_bias_m: FloatArray | None = None,
+    socket_clearance_m: float | None = None,
+    contact_detection_force_n: float = 1.0,
 ) -> list[ResidualEpisodeResult]:
     """Evaluate a policy on deterministic randomized episodes."""
     if episodes <= 0:
@@ -428,11 +511,16 @@ def evaluate_residual_policy(
         config,
         observation_position_noise_std_m=observation_position_noise_std_m,
         observation_position_bias_m=observation_position_bias_m,
+        socket_clearance_m=socket_clearance_m,
+        contact_detection_force_n=contact_detection_force_n,
     )
     base_seed = config.residual_rl.seed if seed is None else seed
     results: list[ResidualEpisodeResult] = []
     try:
         for episode in range(episodes):
+            reset_episode = getattr(policy, "reset_episode", None)
+            if callable(reset_episode):
+                reset_episode()
             observation, info = env.reset(seed=base_seed + episode)
             total_reward = 0.0
             steps = 0
@@ -443,6 +531,9 @@ def evaluate_residual_policy(
                 observation, reward, terminated, truncated, info = env.step(action)
                 total_reward += reward
                 steps += 1
+            episode_metrics = getattr(policy, "episode_metrics", None)
+            policy_metrics = episode_metrics() if callable(episode_metrics) else {}
+            search_triggered = bool(policy_metrics.get("search_triggered", False))
             results.append(
                 ResidualEpisodeResult(
                     episode=episode,
@@ -461,6 +552,11 @@ def evaluate_residual_policy(
                     final_residual_x_m=float(info["residual_offset_m"][0]),
                     final_residual_y_m=float(info["residual_offset_m"][1]),
                     final_residual_z_m=float(info["residual_offset_m"][2]),
+                    contact_occurred=bool(info["contact_occurred"]),
+                    contact_steps=int(info["contact_steps"]),
+                    first_contact_time_s=info["first_contact_time_s"],
+                    search_triggered=search_triggered,
+                    recovery_success=search_triggered and bool(info["is_success"]),
                 )
             )
     finally:
@@ -532,6 +628,15 @@ def save_episode_results(results: list[ResidualEpisodeResult], path: Path) -> No
         "mean_reward": (
             float(np.mean([result.total_reward for result in results])) if results else 0.0
         ),
+        "contact_episodes": sum(result.contact_occurred for result in results),
+        "contact_rate": (
+            sum(result.contact_occurred for result in results) / len(results) if results else 0.0
+        ),
+        "mean_contact_steps": (
+            float(np.mean([result.contact_steps for result in results])) if results else 0.0
+        ),
+        "search_triggers": sum(result.search_triggered for result in results),
+        "recovery_successes": sum(result.recovery_success for result in results),
     }
     with (path / "summary.json").open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2)

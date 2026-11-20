@@ -11,6 +11,7 @@ from panda_assembly.residual_rl import (
     ResidualPegInsertionEnv,
     collect_reference_dataset,
     pose_servo_reference_policy,
+    socket_wall_center_m,
 )
 
 CONFIG = Path(__file__).parents[1] / "configs" / "mvp.toml"
@@ -27,6 +28,14 @@ def test_residual_action_filter_limits_rate_and_offset() -> None:
     for _ in range(100):
         limited = action_filter.command(np.full(3, 2.0), 0.020, True)
     np.testing.assert_allclose(limited, [0.008, 0.008, 0.003])
+
+
+def test_socket_wall_center_preserves_requested_radial_clearance() -> None:
+    center = socket_wall_center_m(0.014, 0.001, 0.015)
+    assert center == pytest.approx(0.030)
+    assert center - 0.015 - 0.014 == pytest.approx(0.001)
+    with pytest.raises(ValueError, match="positive"):
+        socket_wall_center_m(0.014, 0.0, 0.015)
 
 
 def test_residual_environment_follows_gymnasium_contract() -> None:
