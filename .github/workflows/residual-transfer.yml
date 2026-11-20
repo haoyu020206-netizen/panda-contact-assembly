@@ -8,8 +8,10 @@ on:
       - "pyproject.toml"
       - "scripts/evaluate_residual_transfer.py"
       - "scripts/train_residual_sac.py"
+      - "scripts/validate_residual_transfer.py"
       - "src/panda_assembly/residual_rl.py"
       - "tests/test_residual_rl.py"
+      - "tests/test_residual_transfer.py"
   workflow_dispatch:
     inputs:
       timesteps:
@@ -64,6 +66,14 @@ jobs:
           --target-config configs/menagerie.toml
           --output transfer-results
           --episodes "${{ inputs.evaluation_episodes || '2' }}"
+
+      - name: Validate transfer evidence
+        run: >-
+          python scripts/validate_residual_transfer.py transfer-results
+          --min-evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --min-target-learned-success-rate "${{ github.event_name == 'workflow_dispatch' && '0.9' || '0.0' }}"
+          --max-target-learned-safety-violations "${{ github.event_name == 'workflow_dispatch' && '0' || '2' }}"
+          --require-target-non-regression
 
       - name: Upload transfer evidence
         uses: actions/upload-artifact@v7

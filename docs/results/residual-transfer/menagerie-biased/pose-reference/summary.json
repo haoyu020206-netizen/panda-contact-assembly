@@ -1,0 +1,8 @@
+{
+  "episodes": 20,
+  "successes": 18,
+  "success_rate": 0.9,
+  "safety_violations": 0,
+  "mean_peak_force_n": 5.774040992443217,
+  "mean_reward": 84.51067961813655
+}

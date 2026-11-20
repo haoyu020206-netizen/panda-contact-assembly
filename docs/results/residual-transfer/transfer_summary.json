@@ -1,0 +1,171 @@
+{
+  "seed": 20261119,
+  "episodes": 20,
+  "source_config": "configs/mvp.toml",
+  "target_config": "configs/menagerie.toml",
+  "model": "source-training/residual_sac.zip",
+  "conditions": {
+    "mvp-clean": {
+      "label": "MVP clean",
+      "model_variant": "mvp",
+      "observation_position_noise_std_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "observation_position_bias_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "policies": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 9,
+          "success_rate": 0.45,
+          "safety_violations": 10,
+          "mean_peak_force_n": 199.59033582972614,
+          "mean_reward": 13.92546194240784
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 6.648963515136349,
+          "mean_reward": 70.8107904695094
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 4.505971728818928,
+          "mean_reward": 70.80571218117467
+        }
+      }
+    },
+    "menagerie-clean": {
+      "label": "Menagerie clean",
+      "model_variant": "menagerie",
+      "observation_position_noise_std_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "observation_position_bias_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "policies": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 2,
+          "success_rate": 0.1,
+          "safety_violations": 1,
+          "mean_peak_force_n": 145.72191007134734,
+          "mean_reward": 35.209921988937126
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 0.0,
+          "mean_reward": 89.80034589646695
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 0.0,
+          "mean_reward": 89.66546541108615
+        }
+      }
+    },
+    "menagerie-noisy": {
+      "label": "Menagerie + 1 mm noise",
+      "model_variant": "menagerie",
+      "observation_position_noise_std_m": [
+        0.001,
+        0.001,
+        0.001
+      ],
+      "observation_position_bias_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "policies": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 2,
+          "success_rate": 0.1,
+          "safety_violations": 1,
+          "mean_peak_force_n": 145.72191007134734,
+          "mean_reward": 35.209921988937126
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 0.0,
+          "mean_reward": 89.78721757130548
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 0.0,
+          "mean_reward": 89.61798538781063
+        }
+      }
+    },
+    "menagerie-biased": {
+      "label": "Menagerie + pose bias",
+      "model_variant": "menagerie",
+      "observation_position_noise_std_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "observation_position_bias_m": [
+        0.002,
+        -0.002,
+        0.0
+      ],
+      "policies": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 2,
+          "success_rate": 0.1,
+          "safety_violations": 1,
+          "mean_peak_force_n": 145.72191007134734,
+          "mean_reward": 35.209921988937126
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 0.0,
+          "mean_reward": 88.78995535474857
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 18,
+          "success_rate": 0.9,
+          "safety_violations": 0,
+          "mean_peak_force_n": 5.774040992443217,
+          "mean_reward": 84.51067961813655
+        }
+      }
+    }
+  },
+  "zero_shot_success_rate_delta": 0.0,
+  "zero_shot_peak_force_delta_n": -6.648963515136349
+}
