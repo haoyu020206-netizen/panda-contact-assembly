@@ -1,0 +1,77 @@
+name: Contact-Rich Residual Transfer
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/contact-rich-transfer.yml"
+      - "configs/*.toml"
+      - "pyproject.toml"
+      - "scripts/evaluate_contact_rich_transfer.py"
+      - "scripts/train_residual_sac.py"
+      - "src/panda_assembly/contact_search.py"
+      - "src/panda_assembly/residual_rl.py"
+      - "tests/test_contact_search.py"
+      - "tests/test_residual_rl.py"
+  workflow_dispatch:
+    inputs:
+      timesteps:
+        description: MVP SAC environment steps
+        required: true
+        default: "10000"
+        type: string
+      evaluation_episodes:
+        description: Paired episodes per contact condition and policy
+        required: true
+        default: "20"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  contact-rich-transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install residual RL dependencies
+        run: python -m pip install -e ".[rl]"
+
+      - name: Train source policy on lightweight model
+        run: >-
+          python scripts/train_residual_sac.py
+          --config configs/mvp.toml
+          --output source-training
+          --timesteps "${{ inputs.timesteps || '500' }}"
+          --evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --bc-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --bc-epochs 20
+          --rehearsal-mode teacher
+
+      - name: Evaluate narrow-clearance contact and recovery
+        run: >-
+          python scripts/evaluate_contact_rich_transfer.py
+          --model source-training/residual_sac.zip
+          --config configs/menagerie.toml
+          --output contact-rich-results
+          --episodes "${{ inputs.evaluation_episodes || '2' }}"
+
+      - name: Upload contact-rich evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: contact-rich-transfer-results
+          path: |
+            source-training/residual_sac.zip
+            contact-rich-results/
+          if-no-files-found: error
+          retention-days: 30
