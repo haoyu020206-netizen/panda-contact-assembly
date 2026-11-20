@@ -10,6 +10,7 @@ from scripts.aggregate_residual_ablation import (
     plot_summary,
     write_run_csv,
 )
+from scripts.validate_residual_ablation import validate_ablation
 
 
 def write_run(root, seed: int, mode: str, learned_successes: int, learned_safety: int) -> None:
@@ -67,6 +68,16 @@ def test_aggregate_runs_separates_rehearsal_modes(tmp_path) -> None:
     plot_summary(aggregate, plot_path)
     assert csv_path.stat().st_size > 0
     assert plot_path.stat().st_size > 0
+
+    failures = validate_ablation(
+        aggregate,
+        min_seeds=2,
+        min_evaluation_episodes=10,
+        min_teacher_success_rate=0.9,
+        max_teacher_safety_violations=1,
+        require_teacher_non_regression=True,
+    )
+    assert failures == []
 
 
 def test_discover_runs_rejects_duplicate_identity(tmp_path) -> None:

@@ -42,6 +42,16 @@ jobs:
           --max-learned-safety-violations 0
           --require-non-regression
 
+      - name: Validate committed residual ablation evidence
+        run: >-
+          python scripts/validate_residual_ablation.py
+          docs/results/residual-ablation/ablation_summary.json
+          --min-seeds 3
+          --min-evaluation-episodes 20
+          --min-teacher-success-rate 0.95
+          --max-teacher-safety-violations 0
+          --require-teacher-non-regression
+
   experiments:
     needs: quality
     runs-on: ubuntu-latest

@@ -1,0 +1,7 @@
+seed,rehearsal_mode,timesteps,evaluation_episodes,non_regression,baseline_success_rate,bc_success_rate,learned_success_rate,learned_safety_violations,learned_mean_peak_force_n
+20261119,none,10000,20,False,0.45,0.95,0.2,14,170.7640348547767
+20261119,teacher,10000,20,True,0.45,0.95,1.0,0,6.453695487860372
+20261120,none,10000,20,False,0.4,1.0,0.25,14,187.29860093930773
+20261120,teacher,10000,20,True,0.4,1.0,1.0,0,2.2788987790272257
+20261121,none,10000,20,False,0.4,0.95,0.25,15,183.19510017505903
+20261121,teacher,10000,20,True,0.4,0.95,1.0,0,2.37460133962168

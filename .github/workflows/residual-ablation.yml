@@ -7,6 +7,7 @@ on:
       - "pyproject.toml"
       - "scripts/aggregate_residual_ablation.py"
       - "scripts/train_residual_sac.py"
+      - "scripts/validate_residual_ablation.py"
       - "src/panda_assembly/residual_rl.py"
       - "tests/test_residual_ablation.py"
   workflow_dispatch:
@@ -96,6 +97,14 @@ jobs:
           python scripts/aggregate_residual_ablation.py
           downloaded-results
           --output residual-ablation-summary
+
+      - name: Validate ablation structure
+        run: >-
+          python scripts/validate_residual_ablation.py
+          residual-ablation-summary/ablation_summary.json
+          --min-seeds 3
+          --min-evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --require-teacher-non-regression
 
       - name: Upload ablation summary
         uses: actions/upload-artifact@v7
