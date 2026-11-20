@@ -1,6 +1,14 @@
 name: Residual RL Multi-Seed Ablation
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/residual-ablation.yml"
+      - "pyproject.toml"
+      - "scripts/aggregate_residual_ablation.py"
+      - "scripts/train_residual_sac.py"
+      - "src/panda_assembly/residual_rl.py"
+      - "tests/test_residual_ablation.py"
   workflow_dispatch:
     inputs:
       timesteps:
@@ -46,9 +54,9 @@ jobs:
           python scripts/train_residual_sac.py
           --config configs/mvp.toml
           --output ablation-result
-          --timesteps "${{ inputs.timesteps }}"
-          --evaluation-episodes "${{ inputs.evaluation_episodes }}"
-          --bc-episodes "${{ inputs.evaluation_episodes }}"
+          --timesteps "${{ inputs.timesteps || '500' }}"
+          --evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --bc-episodes "${{ inputs.evaluation_episodes || '2' }}"
           --bc-epochs 20
           --seed "${{ matrix.seed }}"
           --rehearsal-mode "${{ matrix.rehearsal }}"
