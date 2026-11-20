@@ -85,10 +85,25 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
 
     metadata = {"render_modes": []}
 
-    def __init__(self, config: ProjectConfig) -> None:
+    def __init__(
+        self,
+        config: ProjectConfig,
+        *,
+        observation_position_noise_std_m: FloatArray | None = None,
+        observation_position_bias_m: FloatArray | None = None,
+    ) -> None:
         super().__init__()
         self.config = config
         self.rl = config.residual_rl
+        self.observation_position_noise_std_m = self._observation_vector(
+            observation_position_noise_std_m,
+            "observation_position_noise_std_m",
+            nonnegative=True,
+        )
+        self.observation_position_bias_m = self._observation_vector(
+            observation_position_bias_m,
+            "observation_position_bias_m",
+        )
         self.model = load_model(
             timestep=config.simulation.timestep,
             variant=config.model.variant,
@@ -125,6 +140,22 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         self.maximum_force_n = 0.0
         self.completion_time_s: float | None = None
         self.episode_done = False
+
+    @staticmethod
+    def _observation_vector(
+        value: FloatArray | None,
+        name: str,
+        *,
+        nonnegative: bool = False,
+    ) -> FloatArray:
+        vector = np.zeros(3, dtype=float) if value is None else np.asarray(value, dtype=float)
+        if vector.shape != (3,):
+            raise ValueError(f"{name} must have shape (3,), got {vector.shape}")
+        if not np.all(np.isfinite(vector)):
+            raise ValueError(f"{name} must contain finite values")
+        if nonnegative and np.any(vector < 0.0):
+            raise ValueError(f"{name} must be nonnegative")
+        return vector.copy()
 
     def _sample_variation(self, options: dict[str, Any] | None) -> Variation:
         if options and "variation" in options:
@@ -224,6 +255,12 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
     def _observation(self) -> NDArray[np.float32]:
         tip_position, _ = site_pose(self.model, self.data, self.tip_id)
         relative_position = self.hole_position - tip_position
+        relative_position += self.observation_position_bias_m
+        if np.any(self.observation_position_noise_std_m):
+            relative_position += self.np_random.normal(
+                loc=0.0,
+                scale=self.observation_position_noise_std_m,
+            )
         tip_velocity = site_jacobian(self.model, self.data, self.tip_id) @ self.data.qvel
         _, _, force, proximity = self._metrics()
         offset = self.action_filter.offset_m
@@ -380,11 +417,18 @@ def evaluate_residual_policy(
     policy: Policy,
     episodes: int,
     seed: int | None = None,
+    *,
+    observation_position_noise_std_m: FloatArray | None = None,
+    observation_position_bias_m: FloatArray | None = None,
 ) -> list[ResidualEpisodeResult]:
     """Evaluate a policy on deterministic randomized episodes."""
     if episodes <= 0:
         raise ValueError("episodes must be positive")
-    env = ResidualPegInsertionEnv(config)
+    env = ResidualPegInsertionEnv(
+        config,
+        observation_position_noise_std_m=observation_position_noise_std_m,
+        observation_position_bias_m=observation_position_bias_m,
+    )
     base_seed = config.residual_rl.seed if seed is None else seed
     results: list[ResidualEpisodeResult] = []
     try:

@@ -1,0 +1,13 @@
+{
+  "github_actions_run": 44818925084,
+  "run_url": "https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44818925084",
+  "source_commit": "65ccc487bbfea46baf947ea27edc8a722dbfa9e4",
+  "branch": "codex/residual-transfer",
+  "runner": "ubuntu-latest",
+  "python": "3.12",
+  "source_config": "configs/mvp.toml",
+  "target_config": "configs/menagerie.toml",
+  "timesteps": 10000,
+  "evaluation_episodes_per_condition_and_policy": 20,
+  "artifact_name": "residual-transfer-results"
+}

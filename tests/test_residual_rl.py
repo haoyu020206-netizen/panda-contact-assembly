@@ -54,6 +54,23 @@ def test_residual_environment_rejects_out_of_shape_action() -> None:
         action_filter.command(np.ones(2), 0.02, True)
 
 
+def test_pose_observation_perturbation_requires_valid_vector() -> None:
+    vector = ResidualPegInsertionEnv._observation_vector(
+        np.array([0.001, 0.002, 0.003]),
+        "noise",
+        nonnegative=True,
+    )
+    np.testing.assert_allclose(vector, [0.001, 0.002, 0.003])
+    with pytest.raises(ValueError, match="shape"):
+        ResidualPegInsertionEnv._observation_vector(np.ones(2), "noise")
+    with pytest.raises(ValueError, match="nonnegative"):
+        ResidualPegInsertionEnv._observation_vector(
+            np.array([0.001, -0.001, 0.0]),
+            "noise",
+            nonnegative=True,
+        )
+
+
 def test_pose_servo_reference_maps_relative_error_to_bounded_offset() -> None:
     observation = np.zeros(12, dtype=np.float32)
     observation[:2] = [0.5, -1.0]
