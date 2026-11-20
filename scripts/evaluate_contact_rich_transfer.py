@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -100,12 +101,15 @@ def main() -> None:
     parser.add_argument("--bias-y-m", type=float, default=-0.002)
     parser.add_argument("--contact-force-n", type=float, default=1.0)
     parser.add_argument("--search-trigger-force-n", type=float, default=5.0)
-    parser.add_argument("--search-radius-m", type=float, default=0.004)
+    parser.add_argument("--search-radius-m", type=float, default=0.007)
+    parser.add_argument("--episode-duration-s", type=float, default=14.0)
     args = parser.parse_args()
     if args.episodes <= 0:
         raise SystemExit("episodes must be positive")
     if args.socket_clearance_m <= 0.0:
         raise SystemExit("socket clearance must be positive")
+    if args.episode_duration_s <= 0.0:
+        raise SystemExit("episode duration must be positive")
 
     try:
         from stable_baselines3 import SAC
@@ -115,6 +119,13 @@ def main() -> None:
         ) from error
 
     config = load_config(args.config)
+    config = replace(
+        config,
+        residual_rl=replace(
+            config.residual_rl,
+            episode_duration_s=args.episode_duration_s,
+        ),
+    )
     seed = config.residual_rl.seed if args.seed is None else args.seed
     model = SAC.load(args.model)
 
