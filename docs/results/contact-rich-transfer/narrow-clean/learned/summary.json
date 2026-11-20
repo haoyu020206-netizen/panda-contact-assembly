@@ -1,0 +1,13 @@
+{
+  "episodes": 20,
+  "successes": 16,
+  "success_rate": 0.8,
+  "safety_violations": 1,
+  "mean_peak_force_n": 40.44012429774576,
+  "mean_reward": 70.05709190272685,
+  "contact_episodes": 12,
+  "contact_rate": 0.6,
+  "mean_contact_steps": 383.1,
+  "search_triggers": 0,
+  "recovery_successes": 0
+}

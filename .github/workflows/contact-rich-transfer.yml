@@ -8,9 +8,11 @@ on:
       - "pyproject.toml"
       - "scripts/evaluate_contact_rich_transfer.py"
       - "scripts/train_residual_sac.py"
+      - "scripts/validate_contact_rich_transfer.py"
       - "src/panda_assembly/contact_search.py"
       - "src/panda_assembly/residual_rl.py"
       - "tests/test_contact_search.py"
+      - "tests/test_contact_rich_transfer.py"
       - "tests/test_residual_rl.py"
   workflow_dispatch:
     inputs:
@@ -65,6 +67,15 @@ jobs:
           --config configs/menagerie.toml
           --output contact-rich-results
           --episodes "${{ inputs.evaluation_episodes || '2' }}"
+
+      - name: Validate contact-rich evidence
+        run: >-
+          python scripts/validate_contact_rich_transfer.py contact-rich-results
+          --min-evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --min-narrow-contact-rate 0.5
+          --max-search-safety-violations "${{ github.event_name == 'workflow_dispatch' && '1' || '2' }}"
+          --min-total-rescued "${{ github.event_name == 'workflow_dispatch' && '2' || '0' }}"
+          --require-search-non-regression
 
       - name: Upload contact-rich evidence
         uses: actions/upload-artifact@v7

@@ -1,0 +1,208 @@
+{
+  "seed": 20261119,
+  "episodes": 20,
+  "config": "configs/menagerie.toml",
+  "model": "source-training/residual_sac.zip",
+  "contact_detection_force_n": 1.0,
+  "search": {
+    "trigger_force_n": 5.0,
+    "radius_m": 0.007,
+    "entry_depth_m": 0.004
+  },
+  "insert_time_s": 12.0,
+  "episode_duration_s": 18.0,
+  "conditions": {
+    "wide-clean": {
+      "label": "5 mm clean",
+      "model_variant": "menagerie",
+      "socket_clearance_m": 0.005,
+      "observation_position_bias_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "policies": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 2,
+          "success_rate": 0.1,
+          "safety_violations": 0,
+          "mean_peak_force_n": 50.21507540592874,
+          "mean_reward": 27.70384905438043,
+          "contact_episodes": 19,
+          "contact_rate": 0.95,
+          "mean_contact_steps": 2057.3,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 0.0,
+          "mean_reward": 88.51775325903523,
+          "contact_episodes": 0,
+          "contact_rate": 0.0,
+          "mean_contact_steps": 0.0,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        },
+        "learned-search": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 0.0,
+          "mean_reward": 88.51775325903523,
+          "contact_episodes": 0,
+          "contact_rate": 0.0,
+          "mean_contact_steps": 0.0,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 20,
+          "success_rate": 1.0,
+          "safety_violations": 0,
+          "mean_peak_force_n": 0.0,
+          "mean_reward": 88.58359774194942,
+          "contact_episodes": 0,
+          "contact_rate": 0.0,
+          "mean_contact_steps": 0.0,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        }
+      }
+    },
+    "narrow-clean": {
+      "label": "3 mm clean",
+      "model_variant": "menagerie",
+      "socket_clearance_m": 0.003,
+      "observation_position_bias_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "policies": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 0,
+          "success_rate": 0.0,
+          "safety_violations": 1,
+          "mean_peak_force_n": 83.49475941501653,
+          "mean_reward": -14.686238354282443,
+          "contact_episodes": 20,
+          "contact_rate": 1.0,
+          "mean_contact_steps": 3351.6,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 16,
+          "success_rate": 0.8,
+          "safety_violations": 1,
+          "mean_peak_force_n": 40.44012429774576,
+          "mean_reward": 70.05709190272685,
+          "contact_episodes": 12,
+          "contact_rate": 0.6,
+          "mean_contact_steps": 383.1,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        },
+        "learned-search": {
+          "episodes": 20,
+          "successes": 17,
+          "success_rate": 0.85,
+          "safety_violations": 1,
+          "mean_peak_force_n": 39.589654123068065,
+          "mean_reward": 72.44485143540328,
+          "contact_episodes": 12,
+          "contact_rate": 0.6,
+          "mean_contact_steps": 386.55,
+          "search_triggers": 7,
+          "recovery_successes": 4
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 9,
+          "success_rate": 0.45,
+          "safety_violations": 1,
+          "mean_peak_force_n": 37.92154274898578,
+          "mean_reward": 53.5079228863156,
+          "contact_episodes": 11,
+          "contact_rate": 0.55,
+          "mean_contact_steps": 284.8,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        }
+      }
+    },
+    "narrow-biased": {
+      "label": "3 mm + pose bias",
+      "model_variant": "menagerie",
+      "socket_clearance_m": 0.003,
+      "observation_position_bias_m": [
+        0.004,
+        -0.004,
+        0.0
+      ],
+      "policies": {
+        "baseline": {
+          "episodes": 20,
+          "successes": 0,
+          "success_rate": 0.0,
+          "safety_violations": 1,
+          "mean_peak_force_n": 83.49475941501653,
+          "mean_reward": -14.686238354282443,
+          "contact_episodes": 20,
+          "contact_rate": 1.0,
+          "mean_contact_steps": 3351.6,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        },
+        "learned": {
+          "episodes": 20,
+          "successes": 6,
+          "success_rate": 0.3,
+          "safety_violations": 1,
+          "mean_peak_force_n": 53.439100462364216,
+          "mean_reward": 27.29833878104438,
+          "contact_episodes": 15,
+          "contact_rate": 0.75,
+          "mean_contact_steps": 2051.25,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        },
+        "learned-search": {
+          "episodes": 20,
+          "successes": 7,
+          "success_rate": 0.35,
+          "safety_violations": 1,
+          "mean_peak_force_n": 53.43909309515318,
+          "mean_reward": 29.443500453182452,
+          "contact_episodes": 15,
+          "contact_rate": 0.75,
+          "mean_contact_steps": 2050.15,
+          "search_triggers": 14,
+          "recovery_successes": 2
+        },
+        "pose-reference": {
+          "episodes": 20,
+          "successes": 6,
+          "success_rate": 0.3,
+          "safety_violations": 1,
+          "mean_peak_force_n": 63.86017397149094,
+          "mean_reward": 28.79756504398916,
+          "contact_episodes": 16,
+          "contact_rate": 0.8,
+          "mean_contact_steps": 2064.2,
+          "search_triggers": 0,
+          "recovery_successes": 0
+        }
+      }
+    }
+  }
+}
