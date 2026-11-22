@@ -52,6 +52,20 @@ jobs:
           --max-teacher-safety-violations 0
           --require-teacher-non-regression
 
+      - name: Validate committed pose-estimator transfer evidence
+        run: >-
+          python scripts/validate_pose_estimator_transfer.py
+          docs/results/pose-estimator-transfer/pose_estimator_aggregate.json
+          --seed-results docs/results/pose-estimator-transfer/seed-results
+          --min-seeds 3
+          --min-evaluation-episodes 20
+          --min-oracle-success-rate 0.75
+          --min-combined-success-rate 0.70
+          --min-all-learned-success-rate 0.60
+          --max-learned-safety-violations-per-condition 6
+          --max-combined-safety-violations 3
+          --require-estimator-signals
+
   experiments:
     needs: quality
     runs-on: ubuntu-latest

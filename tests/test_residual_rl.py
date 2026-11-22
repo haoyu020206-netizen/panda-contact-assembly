@@ -6,6 +6,7 @@ import pytest
 from gymnasium.utils.env_checker import check_env
 
 from panda_assembly.config import load_config
+from panda_assembly.pose_estimation import PoseEstimatorConfig
 from panda_assembly.residual_rl import (
     ResidualActionFilter,
     ResidualPegInsertionEnv,
@@ -94,6 +95,26 @@ def test_action_and_observation_spaces_are_bounded() -> None:
         assert isinstance(env.action_space, gym.spaces.Box)
         assert np.all(np.isfinite(env.action_space.low))
         assert np.all(np.isfinite(env.observation_space.high))
+    finally:
+        env.close()
+
+
+def test_explicit_pose_estimator_reports_age_and_dropouts() -> None:
+    config = load_config(CONFIG)
+    env = ResidualPegInsertionEnv(
+        config,
+        pose_estimator_config=PoseEstimatorConfig(
+            update_period_s=config.residual_rl.control_interval_s,
+            latency_s=0.04,
+            dropout_probability=1.0,
+        ),
+    )
+    try:
+        env.reset(seed=9)
+        _, _, _, _, info = env.step(np.zeros(3, dtype=np.float32))
+        assert info["pose_estimator_samples"] >= 2
+        assert info["pose_estimator_dropouts"] >= 1
+        assert info["mean_pose_estimate_age_s"] > 0.0
     finally:
         env.close()
 

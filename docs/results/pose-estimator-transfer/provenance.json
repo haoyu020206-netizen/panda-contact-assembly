@@ -1,0 +1,39 @@
+{
+  "github_actions_run": 45056792299,
+  "run_url": "https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/45056792299",
+  "source_commit": "bf0d60a2dad58dd92da9529ae35e907797ed5d57",
+  "source_branch": "codex/pose-estimator-transfer",
+  "workflow": ".github/workflows/pose-estimator-transfer.yml",
+  "runner": "ubuntu-latest",
+  "python": "3.12",
+  "source_config": "configs/mvp.toml",
+  "target_config": "configs/menagerie.toml",
+  "training_steps_per_seed": 10000,
+  "seeds": [
+    20261119,
+    20261120,
+    20261121
+  ],
+  "evaluation_episodes_per_condition_policy_seed": 20,
+  "conditions": 6,
+  "policies": 2,
+  "total_evaluation_episodes": 720,
+  "socket_clearance_m": 0.003,
+  "artifacts": [
+    "pose-estimator-transfer-20261119",
+    "pose-estimator-transfer-20261120",
+    "pose-estimator-transfer-20261121",
+    "pose-estimator-transfer-summary"
+  ],
+  "acceptance": {
+    "minimum_seed_count": 3,
+    "minimum_evaluation_episodes_per_condition_policy_seed": 20,
+    "minimum_oracle_learned_success_rate": 0.75,
+    "minimum_combined_learned_success_rate": 0.7,
+    "minimum_learned_success_rate_in_every_condition": 0.6,
+    "maximum_learned_safety_terminations_per_condition": 6,
+    "maximum_combined_learned_safety_terminations": 3,
+    "require_estimator_signals": true,
+    "require_search_non_regression": false
+  }
+}

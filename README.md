@@ -180,7 +180,7 @@ The diagonal impedance case falls by **95.3%** and finishes below the explorator
 
 The learning environment keeps Cartesian impedance control as the nominal policy and exposes only a bounded 3-D target-offset residual at 50 Hz. Requested offsets are rate-limited and capped at 8 mm laterally and 3 mm axially. The policy cannot change impedance gains, orientation control, actuator limits, or the 200 N force termination.
 
-The 12-D observation contains actual hole-relative tip position, tip velocity, contact force, peg-to-wall proximity, episode phase, and the current residual. Reset randomization covers ±7 mm lateral fixture error, 0.6–1.4× friction, and 0.8–1.2× tool mass. Actual hole-relative position is privileged simulation state in this MVP and represents a future vision or pose-estimation input; it must not be described as directly available on hardware.
+The 12-D observation contains estimated hole-relative tip position, tip velocity, contact force, peg-to-wall proximity, episode phase, and the current residual. Reset randomization covers ±7 mm lateral fixture error, 0.6–1.4× friction, and 0.8–1.2× tool mass. The default source benchmark uses an exact simulator-derived pose, while the transfer benchmark below routes that signal through a sampled, delayed, lossy estimator. The measurement source is still privileged simulator state rather than image-derived hardware sensing.
 
 Install the optional training stack and run a paired SAC experiment:
 
@@ -216,7 +216,7 @@ Three seeds were each trained for 10,000 SAC steps both with and without teacher
 | SAC + teacher rehearsal | 60/60, **100%** | 0 | 3.70 N |
 | Privileged pose reference | 60/60, **100%** | 0 | 4.51 N |
 
-The ablation changes the interpretation of the result: unconstrained SAC catastrophically forgot the cloned behavior on all three seeds, falling below even the zero-residual baseline. Teacher rehearsal prevented that failure on all three seeds. The 2/60 difference between behavior cloning and the final rehearsed policy is too small to establish that SAC itself improved task success; the defensible claim is that the combined **BC + SAC + teacher-rehearsal** pipeline preserved a safe teacher-like policy during online updates. This still uses privileged simulator pose; explicit pose-estimator and harder contact-search validation remain necessary. Full evidence comes from [GitHub Actions run 44813895625](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44813895625) and is committed under `docs/results/residual-ablation/`.
+The ablation changes the interpretation of the result: unconstrained SAC catastrophically forgot the cloned behavior on all three seeds, falling below even the zero-residual baseline. Teacher rehearsal prevented that failure on all three seeds. The 2/60 difference between behavior cloning and the final rehearsed policy is too small to establish that SAC itself improved task success; the defensible claim is that the combined **BC + SAC + teacher-rehearsal** pipeline preserved a safe teacher-like policy during online updates. This stage still used exact simulator pose; the later estimator benchmark adds sampling, latency, loss, and correlated error, but an image-derived measurement source remains future work. Full evidence comes from [GitHub Actions run 44813895625](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44813895625) and is committed under `docs/results/residual-ablation/`.
 
 ### Zero-shot Menagerie transfer
 
@@ -247,6 +247,23 @@ The same 10,000-step MVP-trained checkpoint was evaluated without target-model f
 
 The paired result is deliberately modest: search rescued one failed learned-policy episode in each narrow condition and harmed none, a net gain of only 1/20 per condition. That is useful non-regression evidence, not a statistically significant advantage. Narrow clean and biased runs contained geometry contact in 60% and 75% of learned-policy episodes, respectively, so this benchmark does exercise contact. An earlier 1 mm-clearance calibration was rejected as outside the safe recovery envelope: the learned policy succeeded in 0/20 narrow-clean trials, terminated nine times for safety, and averaged 489 N peak force. The 3 mm result should therefore be presented as a measured recoverable envelope for one fixed training seed, not general contact-assembly mastery. Formal evidence comes from [GitHub Actions run 44827694641](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/44827694641) and is committed under `docs/results/contact-rich-transfer/` with an executable CSV/JSON and paired-outcome validator.
 
+### Explicit pose-estimator transfer
+
+![Explicit pose-estimator transfer](docs/results/pose-estimator-transfer/pose_estimator_aggregate.png)
+
+The 3 mm Menagerie task was repeated across three independently trained source seeds. The policy receives a held pose estimate with configurable update period, latency, frame dropout, bias, and stationary Gauss–Markov measurement error. Each row aggregates 60 paired episodes per policy (20 per seed):
+
+| Estimator condition | Learned success | Learned + search | Learned safety terminations | Mean estimate age | Observed dropout | Learned mean peak force |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Ideal pose | 47/60, **78.3%** | 56/60, **93.3%** | 2 | 0.0 ms | 0.0% | 34.6 N |
+| 25 Hz nominal | 45/60, **75.0%** | 46/60, **76.7%** | 0 | 49.9 ms | 0.0% | 37.7 N |
+| 120 ms latency | 44/60, **73.3%** | 30/60, **50.0%** | 3 | 129.2 ms | 0.0% | 71.3 N |
+| 30% frame dropout | 42/60, **70.0%** | 39/60, **65.0%** | 2 | 66.5 ms | 29.1% | 47.5 N |
+| 1.5 mm correlated error | 38/60, **63.3%** | 39/60, **65.0%** | 6 | 49.9 ms | 0.0% | 70.6 N |
+| Latency + dropout + error | 43/60, **71.7%** | 27/60, **45.0%** | 3 | 145.9 ms | 29.1% | 62.3 N |
+
+The learned policy lost only 3.3 percentage points from ideal to nominal sensing and retained 71.7% success in the combined condition. The recovery wrapper is the important negative result: under 120 ms latency it rescued zero trials and harmed 14 otherwise successful trials; under the combined condition it rescued zero and harmed 16. Its entry detector uses stale hole-relative Z, so search must become freshness-aware before it can be called robust. Correlated error was the hardest learned-policy condition and produced six safety terminations. These are fixed three-seed simulation results, not confidence intervals, hardware force predictions, or evidence of real visual pose estimation. Formal evidence comes from [GitHub Actions run 45056792299](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/45056792299), is committed under `docs/results/pose-estimator-transfer/`, and is checked from every per-episode CSV by an executable validator.
+
 ## 已实现
 
 - 自带无网格依赖的 7-DoF Panda 风格 MJCF，可立即验证控制代码；
@@ -269,6 +286,8 @@ The paired result is deliberately modest: search rescued one failed learned-poli
 - 同一残差策略从轻量模型到官方 Menagerie Panda 的零样本迁移，以及 1 mm 观测噪声和 2 mm 位姿偏差评测；
 - 3 mm 窄孔、4 mm 观测偏差下的接触式迁移，以及受限卸载/螺旋恢复策略和逐回合非退化验收；
 - 三随机种子、带/不带教师回放的 6 路消融，以及 120 个 learned-policy 评估回合；
+- 显式位姿估计器代理：采样率、延迟、丢帧、保持上一帧及 Gauss–Markov 相关误差；
+- 3 mm 接触装配在六种感知条件、三随机种子和 720 个评估回合下的可执行验收；
 - 正常成功、危险成功、安全中止、卡住、偏孔和深度不足的失败类型统计；
 - 方孔插入任务、接触力读取和成功判据；
 - 孔位、摩擦和工具质量扰动的批量实验；
@@ -417,6 +436,7 @@ src/panda_assembly/
 ├── metrics.py                   # 指标、CSV、JSON、曲线
 ├── model.py                     # 模型加载与接口校验
 ├── contact_search.py            # 受限卸载与阿基米德螺旋残差恢复
+├── pose_estimation.py           # 延迟、丢帧和相关误差位姿估计器代理
 ├── residual_rl.py               # 受限残差环境、随机化、教师策略和成对评估
 ├── safety.py                    # 接近限速、卡住/螺旋重试、高力回撤与失败分类
 └── trajectories.py              # 五次多项式轨迹
@@ -433,10 +453,11 @@ tests/                            # 配置、数学、轨迹与模型测试
 
 ## 后续升级顺序
 
-1. 用显式位姿估计器替代 privileged hole pose，并评测延迟、丢帧和相关误差；
-2. 对 3 mm 接触基准增加训练种子和置信区间，确认当前每条件 +1/20 的搜索收益是否可重复；
+1. 让螺旋恢复读取估计器新鲜度：陈旧帧时暂停入口判定，或加入短时状态预测；
+2. 用渲染的标记点/相机图像替代 simulator-derived measurement source，并标定相机外参；
 3. 加入 Menagerie 域随机化和少量目标域微调，并和零样本迁移做严格消融；
-4. 考试后再接 ROS2/`ros2_control`、MoveIt2，并为真机加入独立安全监督器。
+4. 扩大训练种子后报告置信区间，并把感知误差和控制失效做分层分析；
+5. 考试后再接 ROS2/`ros2_control`、MoveIt2，并为真机加入独立安全监督器。
 
 ## 简历表述
 

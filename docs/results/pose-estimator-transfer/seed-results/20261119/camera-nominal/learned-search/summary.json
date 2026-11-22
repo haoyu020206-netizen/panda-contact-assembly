@@ -1,0 +1,19 @@
+{
+  "episodes": 20,
+  "successes": 15,
+  "success_rate": 0.75,
+  "safety_violations": 0,
+  "mean_peak_force_n": 37.47676602643784,
+  "mean_reward": 66.36033984128541,
+  "contact_episodes": 17,
+  "contact_rate": 0.85,
+  "mean_contact_steps": 968.05,
+  "search_triggers": 13,
+  "recovery_successes": 8,
+  "mean_pose_estimate_age_s": 0.0498807648556481,
+  "max_pose_estimate_age_s": 0.07800000000002605,
+  "pose_estimator_samples": 6695,
+  "pose_estimator_dropouts": 0,
+  "pose_estimator_delivered_updates": 6675,
+  "pose_estimator_dropout_rate": 0.0
+}

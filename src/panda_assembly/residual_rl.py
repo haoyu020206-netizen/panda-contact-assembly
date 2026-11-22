@@ -22,6 +22,11 @@ from panda_assembly.experiments import (
 from panda_assembly.math_utils import interpolate_rotation, smoothstep, vertical_tool_frame
 from panda_assembly.metrics import minimum_geom_proximity, total_contact_force
 from panda_assembly.model import load_model, reset_to_home
+from panda_assembly.pose_estimation import (
+    DelayedPoseEstimator,
+    PoseEstimate,
+    PoseEstimatorConfig,
+)
 
 FloatArray = NDArray[np.float64]
 Policy = Callable[[NDArray[np.float32]], NDArray[np.float32]]
@@ -76,6 +81,11 @@ class ResidualEpisodeResult:
     contact_occurred: bool
     contact_steps: int
     first_contact_time_s: float | None
+    mean_pose_estimate_age_s: float
+    max_pose_estimate_age_s: float
+    pose_estimator_samples: int
+    pose_estimator_dropouts: int
+    pose_estimator_delivered_updates: int
     search_triggered: bool
     recovery_success: bool
 
@@ -108,21 +118,34 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         *,
         observation_position_noise_std_m: FloatArray | None = None,
         observation_position_bias_m: FloatArray | None = None,
+        pose_estimator_config: PoseEstimatorConfig | None = None,
         socket_clearance_m: float | None = None,
         contact_detection_force_n: float = 1.0,
     ) -> None:
         super().__init__()
         self.config = config
         self.rl = config.residual_rl
-        self.observation_position_noise_std_m = self._observation_vector(
+        legacy_noise_std_m = self._observation_vector(
             observation_position_noise_std_m,
             "observation_position_noise_std_m",
             nonnegative=True,
         )
-        self.observation_position_bias_m = self._observation_vector(
+        legacy_bias_m = self._observation_vector(
             observation_position_bias_m,
             "observation_position_bias_m",
         )
+        if pose_estimator_config is not None and (
+            observation_position_noise_std_m is not None or observation_position_bias_m is not None
+        ):
+            raise ValueError(
+                "pose_estimator_config cannot be combined with legacy observation perturbations"
+            )
+        self.pose_estimator_config = pose_estimator_config or PoseEstimatorConfig(
+            update_period_s=self.rl.control_interval_s,
+            noise_std_m=tuple(float(value) for value in legacy_noise_std_m),
+            bias_m=tuple(float(value) for value in legacy_bias_m),
+        )
+        self.pose_estimator = DelayedPoseEstimator(self.pose_estimator_config)
         if socket_clearance_m is not None and (
             not np.isfinite(socket_clearance_m) or socket_clearance_m <= 0.0
         ):
@@ -173,6 +196,10 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         self.contact_steps = 0
         self.first_contact_time_s: float | None = None
         self.completion_time_s: float | None = None
+        self.last_pose_estimate: PoseEstimate | None = None
+        self.pose_estimate_age_sum_s = 0.0
+        self.pose_estimate_observations = 0
+        self.max_pose_estimate_age_s = 0.0
         self.episode_done = False
 
     def _configure_socket_clearance(
@@ -325,13 +352,17 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
 
     def _observation(self) -> NDArray[np.float32]:
         tip_position, _ = site_pose(self.model, self.data, self.tip_id)
-        relative_position = self.hole_position - tip_position
-        relative_position += self.observation_position_bias_m
-        if np.any(self.observation_position_noise_std_m):
-            relative_position += self.np_random.normal(
-                loc=0.0,
-                scale=self.observation_position_noise_std_m,
-            )
+        true_relative_position = self.hole_position - tip_position
+        pose_estimate = self.pose_estimator.observe(
+            true_relative_position,
+            float(self.data.time),
+            self.np_random,
+        )
+        self.last_pose_estimate = pose_estimate
+        self.pose_estimate_age_sum_s += pose_estimate.age_s
+        self.pose_estimate_observations += 1
+        self.max_pose_estimate_age_s = max(self.max_pose_estimate_age_s, pose_estimate.age_s)
+        relative_position = pose_estimate.relative_position_m
         tip_velocity = site_jacobian(self.model, self.data, self.tip_id) @ self.data.qvel
         _, _, force, proximity = self._metrics()
         offset = self.action_filter.offset_m
@@ -362,6 +393,12 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         depth_m: float,
         force_n: float,
     ) -> dict[str, Any]:
+        pose_estimate = self.last_pose_estimate
+        mean_pose_age_s = (
+            self.pose_estimate_age_sum_s / self.pose_estimate_observations
+            if self.pose_estimate_observations
+            else 0.0
+        )
         return {
             "is_success": success,
             "safety_violation": safety_violation,
@@ -375,6 +412,13 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
             "contact_occurred": self.first_contact_time_s is not None,
             "contact_steps": self.contact_steps,
             "first_contact_time_s": self.first_contact_time_s,
+            "mean_pose_estimate_age_s": mean_pose_age_s,
+            "max_pose_estimate_age_s": self.max_pose_estimate_age_s,
+            "pose_estimator_samples": pose_estimate.samples if pose_estimate else 0,
+            "pose_estimator_dropouts": pose_estimate.dropouts if pose_estimate else 0,
+            "pose_estimator_delivered_updates": (
+                pose_estimate.delivered_updates if pose_estimate else 0
+            ),
             "residual_offset_m": self.action_filter.offset_m.copy().tolist()
             if self.action_filter.offset_m is not None
             else [0.0, 0.0, 0.0],
@@ -395,7 +439,17 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
         self.contact_steps = 0
         self.first_contact_time_s = None
         self.completion_time_s = None
+        self.last_pose_estimate = None
+        self.pose_estimate_age_sum_s = 0.0
+        self.pose_estimate_observations = 0
+        self.max_pose_estimate_age_s = 0.0
         self.episode_done = False
+        tip_position, _ = site_pose(self.model, self.data, self.tip_id)
+        self.pose_estimator.reset(
+            self.hole_position - tip_position,
+            float(self.data.time),
+            self.np_random,
+        )
         xy_error, depth, force, _ = self._metrics()
         self.previous_xy_error_m = xy_error
         self.previous_depth_m = depth
@@ -501,6 +555,7 @@ def evaluate_residual_policy(
     *,
     observation_position_noise_std_m: FloatArray | None = None,
     observation_position_bias_m: FloatArray | None = None,
+    pose_estimator_config: PoseEstimatorConfig | None = None,
     socket_clearance_m: float | None = None,
     contact_detection_force_n: float = 1.0,
 ) -> list[ResidualEpisodeResult]:
@@ -511,6 +566,7 @@ def evaluate_residual_policy(
         config,
         observation_position_noise_std_m=observation_position_noise_std_m,
         observation_position_bias_m=observation_position_bias_m,
+        pose_estimator_config=pose_estimator_config,
         socket_clearance_m=socket_clearance_m,
         contact_detection_force_n=contact_detection_force_n,
     )
@@ -555,6 +611,11 @@ def evaluate_residual_policy(
                     contact_occurred=bool(info["contact_occurred"]),
                     contact_steps=int(info["contact_steps"]),
                     first_contact_time_s=info["first_contact_time_s"],
+                    mean_pose_estimate_age_s=float(info["mean_pose_estimate_age_s"]),
+                    max_pose_estimate_age_s=float(info["max_pose_estimate_age_s"]),
+                    pose_estimator_samples=int(info["pose_estimator_samples"]),
+                    pose_estimator_dropouts=int(info["pose_estimator_dropouts"]),
+                    pose_estimator_delivered_updates=int(info["pose_estimator_delivered_updates"]),
                     search_triggered=search_triggered,
                     recovery_success=search_triggered and bool(info["is_success"]),
                 )
@@ -637,6 +698,25 @@ def save_episode_results(results: list[ResidualEpisodeResult], path: Path) -> No
         ),
         "search_triggers": sum(result.search_triggered for result in results),
         "recovery_successes": sum(result.recovery_success for result in results),
+        "mean_pose_estimate_age_s": (
+            float(np.mean([result.mean_pose_estimate_age_s for result in results]))
+            if results
+            else 0.0
+        ),
+        "max_pose_estimate_age_s": (
+            max(result.max_pose_estimate_age_s for result in results) if results else 0.0
+        ),
+        "pose_estimator_samples": sum(result.pose_estimator_samples for result in results),
+        "pose_estimator_dropouts": sum(result.pose_estimator_dropouts for result in results),
+        "pose_estimator_delivered_updates": sum(
+            result.pose_estimator_delivered_updates for result in results
+        ),
+        "pose_estimator_dropout_rate": (
+            sum(result.pose_estimator_dropouts for result in results)
+            / sum(result.pose_estimator_samples for result in results)
+            if results and sum(result.pose_estimator_samples for result in results)
+            else 0.0
+        ),
     }
     with (path / "summary.json").open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2)

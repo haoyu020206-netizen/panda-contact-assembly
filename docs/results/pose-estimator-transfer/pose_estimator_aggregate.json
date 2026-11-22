@@ -1,0 +1,1692 @@
+{
+  "seeds": [
+    20261119,
+    20261120,
+    20261121
+  ],
+  "run_count": 3,
+  "episodes_per_seed": [
+    20
+  ],
+  "socket_clearance_m": [
+    0.003
+  ],
+  "conditions": {
+    "oracle": {
+      "label": "Ideal pose",
+      "pose_estimator": {
+        "update_period_s": 0.002,
+        "latency_s": 0.0,
+        "dropout_probability": 0.0,
+        "noise_std_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "bias_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "correlation_time_s": 0.0
+      },
+      "policies": {
+        "learned": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 47,
+          "success_rate": 0.7833333333333333,
+          "success_rate_seed_mean": 0.7833333333333333,
+          "success_rate_seed_std": 0.05773502691896256,
+          "safety_violations": 2,
+          "mean_peak_force_n": 34.64025211865614,
+          "mean_reward": 71.35555099987724,
+          "contact_episodes": 35,
+          "contact_rate": 0.5833333333333334,
+          "mean_contact_steps": 123.76666666666667,
+          "search_triggers": 0,
+          "recovery_successes": 0,
+          "mean_pose_estimate_age_s": 0.0,
+          "max_pose_estimate_age_s": 0.0,
+          "pose_estimator_samples": 38371,
+          "pose_estimator_dropouts": 0,
+          "pose_estimator_delivered_updates": 38371,
+          "pose_estimator_dropout_rate": 0.0
+        },
+        "learned-search": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 56,
+          "success_rate": 0.9333333333333333,
+          "success_rate_seed_mean": 0.9333333333333332,
+          "success_rate_seed_std": 0.028867513459481253,
+          "safety_violations": 2,
+          "mean_peak_force_n": 34.454169345161326,
+          "mean_reward": 78.68288350099883,
+          "contact_episodes": 35,
+          "contact_rate": 0.5833333333333334,
+          "mean_contact_steps": 115.93333333333334,
+          "search_triggers": 24,
+          "recovery_successes": 22,
+          "mean_pose_estimate_age_s": 0.0,
+          "max_pose_estimate_age_s": 0.0,
+          "pose_estimator_samples": 36046,
+          "pose_estimator_dropouts": 0,
+          "pose_estimator_delivered_updates": 36046,
+          "pose_estimator_dropout_rate": 0.0
+        }
+      },
+      "paired_outcomes": {
+        "rescued": 9,
+        "harmed": 0,
+        "both_success": 47,
+        "neither": 4
+      },
+      "learned_success_delta_vs_oracle": 0.0
+    },
+    "camera-nominal": {
+      "label": "25 Hz camera",
+      "pose_estimator": {
+        "update_period_s": 0.04,
+        "latency_s": 0.04,
+        "dropout_probability": 0.0,
+        "noise_std_m": [
+          0.0005,
+          0.0005,
+          0.00025
+        ],
+        "bias_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "correlation_time_s": 0.2
+      },
+      "policies": {
+        "learned": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 45,
+          "success_rate": 0.75,
+          "success_rate_seed_mean": 0.75,
+          "success_rate_seed_std": 0.050000000000000044,
+          "safety_violations": 0,
+          "mean_peak_force_n": 37.69921118422597,
+          "mean_reward": 67.22857589275482,
+          "contact_episodes": 52,
+          "contact_rate": 0.8666666666666667,
+          "mean_contact_steps": 907.5333333333333,
+          "search_triggers": 0,
+          "recovery_successes": 0,
+          "mean_pose_estimate_age_s": 0.04987545927960542,
+          "max_pose_estimate_age_s": 0.07800000000002605,
+          "pose_estimator_samples": 19971,
+          "pose_estimator_dropouts": 0,
+          "pose_estimator_delivered_updates": 19911,
+          "pose_estimator_dropout_rate": 0.0
+        },
+        "learned-search": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 46,
+          "success_rate": 0.7666666666666667,
+          "success_rate_seed_mean": 0.7666666666666666,
+          "success_rate_seed_std": 0.028867513459481315,
+          "safety_violations": 0,
+          "mean_peak_force_n": 37.132573949194985,
+          "mean_reward": 67.36560445982367,
+          "contact_episodes": 52,
+          "contact_rate": 0.8666666666666667,
+          "mean_contact_steps": 976.2666666666667,
+          "search_triggers": 46,
+          "recovery_successes": 32,
+          "mean_pose_estimate_age_s": 0.0498846669382346,
+          "max_pose_estimate_age_s": 0.07800000000002605,
+          "pose_estimator_samples": 20332,
+          "pose_estimator_dropouts": 0,
+          "pose_estimator_delivered_updates": 20272,
+          "pose_estimator_dropout_rate": 0.0
+        }
+      },
+      "paired_outcomes": {
+        "rescued": 2,
+        "harmed": 1,
+        "both_success": 44,
+        "neither": 13
+      },
+      "learned_success_delta_vs_oracle": -0.033333333333333326
+    },
+    "camera-latency": {
+      "label": "120 ms latency",
+      "pose_estimator": {
+        "update_period_s": 0.04,
+        "latency_s": 0.12,
+        "dropout_probability": 0.0,
+        "noise_std_m": [
+          0.0005,
+          0.0005,
+          0.00025
+        ],
+        "bias_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "correlation_time_s": 0.2
+      },
+      "policies": {
+        "learned": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 44,
+          "success_rate": 0.7333333333333333,
+          "success_rate_seed_mean": 0.7333333333333334,
+          "success_rate_seed_std": 0.028867513459481315,
+          "safety_violations": 3,
+          "mean_peak_force_n": 71.32160648154505,
+          "mean_reward": 62.12548051696066,
+          "contact_episodes": 60,
+          "contact_rate": 1.0,
+          "mean_contact_steps": 812.7,
+          "search_triggers": 0,
+          "recovery_successes": 0,
+          "mean_pose_estimate_age_s": 0.1292433550914682,
+          "max_pose_estimate_age_s": 0.1560000000000521,
+          "pose_estimator_samples": 19651,
+          "pose_estimator_dropouts": 0,
+          "pose_estimator_delivered_updates": 19471,
+          "pose_estimator_dropout_rate": 0.0
+        },
+        "learned-search": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 30,
+          "success_rate": 0.5,
+          "success_rate_seed_mean": 0.5,
+          "success_rate_seed_std": 0.05000000000000002,
+          "safety_violations": 3,
+          "mean_peak_force_n": 70.77241772915684,
+          "mean_reward": 47.95379075595734,
+          "contact_episodes": 60,
+          "contact_rate": 1.0,
+          "mean_contact_steps": 1539.8166666666666,
+          "search_triggers": 54,
+          "recovery_successes": 27,
+          "mean_pose_estimate_age_s": 0.12933393078890934,
+          "max_pose_estimate_age_s": 0.15800000000005276,
+          "pose_estimator_samples": 22490,
+          "pose_estimator_dropouts": 0,
+          "pose_estimator_delivered_updates": 22310,
+          "pose_estimator_dropout_rate": 0.0
+        }
+      },
+      "paired_outcomes": {
+        "rescued": 0,
+        "harmed": 14,
+        "both_success": 30,
+        "neither": 16
+      },
+      "learned_success_delta_vs_oracle": -0.050000000000000044
+    },
+    "camera-dropout": {
+      "label": "30% dropout",
+      "pose_estimator": {
+        "update_period_s": 0.04,
+        "latency_s": 0.04,
+        "dropout_probability": 0.3,
+        "noise_std_m": [
+          0.0005,
+          0.0005,
+          0.00025
+        ],
+        "bias_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "correlation_time_s": 0.2
+      },
+      "policies": {
+        "learned": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 42,
+          "success_rate": 0.7,
+          "success_rate_seed_mean": 0.6999999999999998,
+          "success_rate_seed_std": 1.3597399555105182e-16,
+          "safety_violations": 2,
+          "mean_peak_force_n": 47.48375258400588,
+          "mean_reward": 63.50585381662865,
+          "contact_episodes": 52,
+          "contact_rate": 0.8666666666666667,
+          "mean_contact_steps": 911.65,
+          "search_triggers": 0,
+          "recovery_successes": 0,
+          "mean_pose_estimate_age_s": 0.06652130310405666,
+          "max_pose_estimate_age_s": 0.33999999999996255,
+          "pose_estimator_samples": 20024,
+          "pose_estimator_dropouts": 5824,
+          "pose_estimator_delivered_updates": 14160,
+          "pose_estimator_dropout_rate": 0.2908509788254095
+        },
+        "learned-search": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 39,
+          "success_rate": 0.65,
+          "success_rate_seed_mean": 0.65,
+          "success_rate_seed_std": 0.09999999999999998,
+          "safety_violations": 2,
+          "mean_peak_force_n": 47.50313967083537,
+          "mean_reward": 60.04865174339729,
+          "contact_episodes": 52,
+          "contact_rate": 0.8666666666666667,
+          "mean_contact_steps": 1166.6833333333334,
+          "search_triggers": 45,
+          "recovery_successes": 25,
+          "mean_pose_estimate_age_s": 0.06656212067759619,
+          "max_pose_estimate_age_s": 0.33999999999996255,
+          "pose_estimator_samples": 21300,
+          "pose_estimator_dropouts": 6195,
+          "pose_estimator_delivered_updates": 15061,
+          "pose_estimator_dropout_rate": 0.2908450704225352
+        }
+      },
+      "paired_outcomes": {
+        "rescued": 2,
+        "harmed": 5,
+        "both_success": 37,
+        "neither": 16
+      },
+      "learned_success_delta_vs_oracle": -0.08333333333333337
+    },
+    "camera-correlated": {
+      "label": "Correlated 1.5 mm error",
+      "pose_estimator": {
+        "update_period_s": 0.04,
+        "latency_s": 0.04,
+        "dropout_probability": 0.0,
+        "noise_std_m": [
+          0.0015,
+          0.0015,
+          0.0005
+        ],
+        "bias_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "correlation_time_s": 0.8
+      },
+      "policies": {
+        "learned": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 38,
+          "success_rate": 0.6333333333333333,
+          "success_rate_seed_mean": 0.6333333333333333,
+          "success_rate_seed_std": 0.028867513459481315,
+          "safety_violations": 6,
+          "mean_peak_force_n": 70.63428140048936,
+          "mean_reward": 55.665736063533146,
+          "contact_episodes": 55,
+          "contact_rate": 0.9166666666666666,
+          "mean_contact_steps": 1054.7166666666667,
+          "search_triggers": 0,
+          "recovery_successes": 0,
+          "mean_pose_estimate_age_s": 0.049881074853253556,
+          "max_pose_estimate_age_s": 0.07800000000002605,
+          "pose_estimator_samples": 20318,
+          "pose_estimator_dropouts": 0,
+          "pose_estimator_delivered_updates": 20258,
+          "pose_estimator_dropout_rate": 0.0
+        },
+        "learned-search": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 39,
+          "success_rate": 0.65,
+          "success_rate_seed_mean": 0.65,
+          "success_rate_seed_std": 0.0,
+          "safety_violations": 6,
+          "mean_peak_force_n": 70.07080749104678,
+          "mean_reward": 55.42531533083317,
+          "contact_episodes": 55,
+          "contact_rate": 0.9166666666666666,
+          "mean_contact_steps": 1061.55,
+          "search_triggers": 47,
+          "recovery_successes": 31,
+          "mean_pose_estimate_age_s": 0.04988516576705545,
+          "max_pose_estimate_age_s": 0.07800000000002605,
+          "pose_estimator_samples": 20424,
+          "pose_estimator_dropouts": 0,
+          "pose_estimator_delivered_updates": 20364,
+          "pose_estimator_dropout_rate": 0.0
+        }
+      },
+      "paired_outcomes": {
+        "rescued": 2,
+        "harmed": 1,
+        "both_success": 37,
+        "neither": 20
+      },
+      "learned_success_delta_vs_oracle": -0.15000000000000002
+    },
+    "camera-combined": {
+      "label": "Latency + dropout + error",
+      "pose_estimator": {
+        "update_period_s": 0.04,
+        "latency_s": 0.12,
+        "dropout_probability": 0.3,
+        "noise_std_m": [
+          0.0015,
+          0.0015,
+          0.0005
+        ],
+        "bias_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "correlation_time_s": 0.8
+      },
+      "policies": {
+        "learned": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 43,
+          "success_rate": 0.7166666666666667,
+          "success_rate_seed_mean": 0.7166666666666667,
+          "success_rate_seed_std": 0.07637626158259735,
+          "safety_violations": 3,
+          "mean_peak_force_n": 62.2742603260216,
+          "mean_reward": 59.16957479049042,
+          "contact_episodes": 60,
+          "contact_rate": 1.0,
+          "mean_contact_steps": 997.7166666666667,
+          "search_triggers": 0,
+          "recovery_successes": 0,
+          "mean_pose_estimate_age_s": 0.14594025161870444,
+          "max_pose_estimate_age_s": 0.41999999999995374,
+          "pose_estimator_samples": 20151,
+          "pose_estimator_dropouts": 5863,
+          "pose_estimator_delivered_updates": 14161,
+          "pose_estimator_dropout_rate": 0.2909533025656295
+        },
+        "learned-search": {
+          "seeds": 3,
+          "episodes": 60,
+          "successes": 27,
+          "success_rate": 0.45,
+          "success_rate_seed_mean": 0.44999999999999996,
+          "success_rate_seed_std": 0.15,
+          "safety_violations": 3,
+          "mean_peak_force_n": 62.54155249627828,
+          "mean_reward": 41.97426548817106,
+          "contact_episodes": 60,
+          "contact_rate": 1.0,
+          "mean_contact_steps": 1825.0166666666667,
+          "search_triggers": 55,
+          "recovery_successes": 24,
+          "mean_pose_estimate_age_s": 0.14602127929020062,
+          "max_pose_estimate_age_s": 0.41999999999995374,
+          "pose_estimator_samples": 23071,
+          "pose_estimator_dropouts": 6705,
+          "pose_estimator_delivered_updates": 16232,
+          "pose_estimator_dropout_rate": 0.2906245936457024
+        }
+      },
+      "paired_outcomes": {
+        "rescued": 0,
+        "harmed": 16,
+        "both_success": 27,
+        "neither": 17
+      },
+      "learned_success_delta_vs_oracle": -0.06666666666666665
+    }
+  },
+  "runs": [
+    {
+      "seed": 20261119,
+      "episodes": 20,
+      "config": "configs/menagerie.toml",
+      "model": "source-training/residual_sac.zip",
+      "socket_clearance_m": 0.003,
+      "contact_detection_force_n": 1.0,
+      "search": {
+        "trigger_force_n": 5.0,
+        "radius_m": 0.007,
+        "entry_depth_m": 0.004
+      },
+      "insert_time_s": 12.0,
+      "episode_duration_s": 18.0,
+      "conditions": {
+        "oracle": {
+          "label": "Ideal pose",
+          "pose_estimator": {
+            "update_period_s": 0.002,
+            "latency_s": 0.0,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.0
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 17,
+              "success_rate": 0.85,
+              "safety_violations": 1,
+              "mean_peak_force_n": 35.332092128481946,
+              "mean_reward": 73.78538991200296,
+              "contact_episodes": 12,
+              "contact_rate": 0.6,
+              "mean_contact_steps": 197.9,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.0,
+              "max_pose_estimate_age_s": 0.0,
+              "pose_estimator_samples": 12299,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 12299,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 18,
+              "success_rate": 0.9,
+              "safety_violations": 1,
+              "mean_peak_force_n": 34.77510783036819,
+              "mean_reward": 75.74250203546868,
+              "contact_episodes": 12,
+              "contact_rate": 0.6,
+              "mean_contact_steps": 259.65,
+              "search_triggers": 11,
+              "recovery_successes": 10,
+              "mean_pose_estimate_age_s": 0.0,
+              "max_pose_estimate_age_s": 0.0,
+              "pose_estimator_samples": 12155,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 12155,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": 0.0,
+          "paired_outcomes": {
+            "rescued": 1,
+            "harmed": 0,
+            "both_success": 17,
+            "neither": 2
+          }
+        },
+        "camera-nominal": {
+          "label": "25 Hz camera",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.04,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0005,
+              0.0005,
+              0.00025
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.2
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 15,
+              "success_rate": 0.75,
+              "safety_violations": 0,
+              "mean_peak_force_n": 37.47676602643784,
+              "mean_reward": 66.7347519631227,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 945.0,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.04987002007644701,
+              "max_pose_estimate_age_s": 0.07800000000002605,
+              "pose_estimator_samples": 6651,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6631,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 15,
+              "success_rate": 0.75,
+              "safety_violations": 0,
+              "mean_peak_force_n": 37.47676602643784,
+              "mean_reward": 66.36033984128541,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 968.05,
+              "search_triggers": 13,
+              "recovery_successes": 8,
+              "mean_pose_estimate_age_s": 0.0498807648556481,
+              "max_pose_estimate_age_s": 0.07800000000002605,
+              "pose_estimator_samples": 6695,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6675,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.09999999999999998,
+          "paired_outcomes": {
+            "rescued": 0,
+            "harmed": 0,
+            "both_success": 15,
+            "neither": 5
+          }
+        },
+        "camera-latency": {
+          "label": "120 ms latency",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.12,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0005,
+              0.0005,
+              0.00025
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.2
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 15,
+              "success_rate": 0.75,
+              "safety_violations": 1,
+              "mean_peak_force_n": 77.69175390441947,
+              "mean_reward": 62.88363499109861,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 804.15,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.1292439494142932,
+              "max_pose_estimate_age_s": 0.1560000000000521,
+              "pose_estimator_samples": 6480,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6420,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 9,
+              "success_rate": 0.45,
+              "safety_violations": 1,
+              "mean_peak_force_n": 76.45552564463357,
+              "mean_reward": 44.456140992316506,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 1846.1,
+              "search_triggers": 17,
+              "recovery_successes": 7,
+              "mean_pose_estimate_age_s": 0.1293257897057341,
+              "max_pose_estimate_age_s": 0.1560000000000521,
+              "pose_estimator_samples": 7471,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 7411,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.09999999999999998,
+          "paired_outcomes": {
+            "rescued": 0,
+            "harmed": 6,
+            "both_success": 9,
+            "neither": 5
+          }
+        },
+        "camera-dropout": {
+          "label": "30% dropout",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.04,
+            "dropout_probability": 0.3,
+            "noise_std_m": [
+              0.0005,
+              0.0005,
+              0.00025
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.2
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 14,
+              "success_rate": 0.7,
+              "safety_violations": 1,
+              "mean_peak_force_n": 53.18835767369619,
+              "mean_reward": 62.09418361888057,
+              "contact_episodes": 18,
+              "contact_rate": 0.9,
+              "mean_contact_steps": 949.75,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.06648079289666481,
+              "max_pose_estimate_age_s": 0.33999999999996255,
+              "pose_estimator_samples": 6629,
+              "pose_estimator_dropouts": 1920,
+              "pose_estimator_delivered_updates": 4695,
+              "pose_estimator_dropout_rate": 0.2896364459194449
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 13,
+              "success_rate": 0.65,
+              "safety_violations": 1,
+              "mean_peak_force_n": 53.18835767369619,
+              "mean_reward": 58.37520439364694,
+              "contact_episodes": 18,
+              "contact_rate": 0.9,
+              "mean_contact_steps": 1276.25,
+              "search_triggers": 15,
+              "recovery_successes": 8,
+              "mean_pose_estimate_age_s": 0.06659507548888328,
+              "max_pose_estimate_age_s": 0.33999999999996255,
+              "pose_estimator_samples": 7037,
+              "pose_estimator_dropouts": 2043,
+              "pose_estimator_delivered_updates": 4979,
+              "pose_estimator_dropout_rate": 0.2903225806451613
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.15000000000000002,
+          "paired_outcomes": {
+            "rescued": 0,
+            "harmed": 1,
+            "both_success": 13,
+            "neither": 6
+          }
+        },
+        "camera-correlated": {
+          "label": "Correlated 1.5 mm error",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.04,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0015,
+              0.0015,
+              0.0005
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.8
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 12,
+              "success_rate": 0.6,
+              "safety_violations": 1,
+              "mean_peak_force_n": 73.65616287761983,
+              "mean_reward": 55.57676691925998,
+              "contact_episodes": 19,
+              "contact_rate": 0.95,
+              "mean_contact_steps": 1295.8,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.04988439613058735,
+              "max_pose_estimate_age_s": 0.07200000000002404,
+              "pose_estimator_samples": 7033,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 7013,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 13,
+              "success_rate": 0.65,
+              "safety_violations": 1,
+              "mean_peak_force_n": 73.91595306716397,
+              "mean_reward": 56.56910396665255,
+              "contact_episodes": 19,
+              "contact_rate": 0.95,
+              "mean_contact_steps": 1237.7,
+              "search_triggers": 17,
+              "recovery_successes": 11,
+              "mean_pose_estimate_age_s": 0.049880370297286716,
+              "max_pose_estimate_age_s": 0.07400000000002471,
+              "pose_estimator_samples": 6980,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6960,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.25,
+          "paired_outcomes": {
+            "rescued": 1,
+            "harmed": 0,
+            "both_success": 12,
+            "neither": 7
+          }
+        },
+        "camera-combined": {
+          "label": "Latency + dropout + error",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.12,
+            "dropout_probability": 0.3,
+            "noise_std_m": [
+              0.0015,
+              0.0015,
+              0.0005
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.8
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 14,
+              "success_rate": 0.7,
+              "safety_violations": 1,
+              "mean_peak_force_n": 63.65166583710701,
+              "mean_reward": 58.53019404783763,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 991.5,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.14593948281231212,
+              "max_pose_estimate_age_s": 0.41999999999995374,
+              "pose_estimator_samples": 6675,
+              "pose_estimator_dropouts": 1947,
+              "pose_estimator_delivered_updates": 4691,
+              "pose_estimator_dropout_rate": 0.29168539325842696
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 6,
+              "success_rate": 0.3,
+              "safety_violations": 1,
+              "mean_peak_force_n": 65.6575886248689,
+              "mean_reward": 34.547042652186434,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 2238.6,
+              "search_triggers": 19,
+              "recovery_successes": 6,
+              "mean_pose_estimate_age_s": 0.14611553399078298,
+              "max_pose_estimate_age_s": 0.41999999999995374,
+              "pose_estimator_samples": 8104,
+              "pose_estimator_dropouts": 2358,
+              "pose_estimator_delivered_updates": 5702,
+              "pose_estimator_dropout_rate": 0.2909674234945706
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.15000000000000002,
+          "paired_outcomes": {
+            "rescued": 0,
+            "harmed": 8,
+            "both_success": 6,
+            "neither": 6
+          }
+        }
+      },
+      "source": "pose-estimator-transfer-20261119/pose-estimator-result/pose_estimator_summary.json"
+    },
+    {
+      "seed": 20261120,
+      "episodes": 20,
+      "config": "configs/menagerie.toml",
+      "model": "source-training/residual_sac.zip",
+      "socket_clearance_m": 0.003,
+      "contact_detection_force_n": 1.0,
+      "search": {
+        "trigger_force_n": 5.0,
+        "radius_m": 0.007,
+        "entry_depth_m": 0.004
+      },
+      "insert_time_s": 12.0,
+      "episode_duration_s": 18.0,
+      "conditions": {
+        "oracle": {
+          "label": "Ideal pose",
+          "pose_estimator": {
+            "update_period_s": 0.002,
+            "latency_s": 0.0,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.0
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 15,
+              "success_rate": 0.75,
+              "safety_violations": 1,
+              "mean_peak_force_n": 42.69501019531033,
+              "mean_reward": 68.89200942740912,
+              "contact_episodes": 12,
+              "contact_rate": 0.6,
+              "mean_contact_steps": 48.45,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.0,
+              "max_pose_estimate_age_s": 0.0,
+              "pose_estimator_samples": 12844,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 12844,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 19,
+              "success_rate": 0.95,
+              "safety_violations": 1,
+              "mean_peak_force_n": 42.69374617293964,
+              "mean_reward": 78.91653141581989,
+              "contact_episodes": 12,
+              "contact_rate": 0.6,
+              "mean_contact_steps": 25.6,
+              "search_triggers": 8,
+              "recovery_successes": 7,
+              "mean_pose_estimate_age_s": 0.0,
+              "max_pose_estimate_age_s": 0.0,
+              "pose_estimator_samples": 11716,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 11716,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": 0.0,
+          "paired_outcomes": {
+            "rescued": 4,
+            "harmed": 0,
+            "both_success": 15,
+            "neither": 1
+          }
+        },
+        "camera-nominal": {
+          "label": "25 Hz camera",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.04,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0005,
+              0.0005,
+              0.00025
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.2
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 16,
+              "success_rate": 0.8,
+              "safety_violations": 0,
+              "mean_peak_force_n": 40.17428396388758,
+              "mean_reward": 70.89402046128995,
+              "contact_episodes": 18,
+              "contact_rate": 0.9,
+              "mean_contact_steps": 763.45,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.049878774021734344,
+              "max_pose_estimate_age_s": 0.07600000000002538,
+              "pose_estimator_samples": 6535,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6515,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 16,
+              "success_rate": 0.8,
+              "safety_violations": 0,
+              "mean_peak_force_n": 40.01391800525083,
+              "mean_reward": 69.7330289861149,
+              "contact_episodes": 18,
+              "contact_rate": 0.9,
+              "mean_contact_steps": 863.95,
+              "search_triggers": 16,
+              "recovery_successes": 12,
+              "mean_pose_estimate_age_s": 0.04988355086825958,
+              "max_pose_estimate_age_s": 0.07600000000002538,
+              "pose_estimator_samples": 6713,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6693,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": 0.050000000000000044,
+          "paired_outcomes": {
+            "rescued": 1,
+            "harmed": 1,
+            "both_success": 15,
+            "neither": 3
+          }
+        },
+        "camera-latency": {
+          "label": "120 ms latency",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.12,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0005,
+              0.0005,
+              0.00025
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.2
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 15,
+              "success_rate": 0.75,
+              "safety_violations": 0,
+              "mean_peak_force_n": 54.68870101756988,
+              "mean_reward": 65.75327322597481,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 821.1,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.12925346715220407,
+              "max_pose_estimate_age_s": 0.15200000000005076,
+              "pose_estimator_samples": 6678,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6618,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 11,
+              "success_rate": 0.55,
+              "safety_violations": 0,
+              "mean_peak_force_n": 53.50962593131369,
+              "mean_reward": 54.11932434479617,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 1365.15,
+              "search_triggers": 19,
+              "recovery_successes": 10,
+              "mean_pose_estimate_age_s": 0.12934628878615378,
+              "max_pose_estimate_age_s": 0.15200000000005076,
+              "pose_estimator_samples": 7625,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 7565,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": 0.0,
+          "paired_outcomes": {
+            "rescued": 0,
+            "harmed": 4,
+            "both_success": 11,
+            "neither": 5
+          }
+        },
+        "camera-dropout": {
+          "label": "30% dropout",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.04,
+            "dropout_probability": 0.3,
+            "noise_std_m": [
+              0.0005,
+              0.0005,
+              0.00025
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.2
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 14,
+              "success_rate": 0.7,
+              "safety_violations": 0,
+              "mean_peak_force_n": 36.627171523079824,
+              "mean_reward": 65.08401907287136,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 948.6,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.06648857615962275,
+              "max_pose_estimate_age_s": 0.33999999999996255,
+              "pose_estimator_samples": 6791,
+              "pose_estimator_dropouts": 1976,
+              "pose_estimator_delivered_updates": 4804,
+              "pose_estimator_dropout_rate": 0.2909733470770137
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 15,
+              "success_rate": 0.75,
+              "safety_violations": 0,
+              "mean_peak_force_n": 36.6674986226091,
+              "mean_reward": 67.09654404397892,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 900.15,
+              "search_triggers": 15,
+              "recovery_successes": 10,
+              "mean_pose_estimate_age_s": 0.06656654892091658,
+              "max_pose_estimate_age_s": 0.33999999999996255,
+              "pose_estimator_samples": 6876,
+              "pose_estimator_dropouts": 2000,
+              "pose_estimator_delivered_updates": 4863,
+              "pose_estimator_dropout_rate": 0.29086678301337987
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.050000000000000044,
+          "paired_outcomes": {
+            "rescued": 1,
+            "harmed": 0,
+            "both_success": 14,
+            "neither": 5
+          }
+        },
+        "camera-correlated": {
+          "label": "Correlated 1.5 mm error",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.04,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0015,
+              0.0015,
+              0.0005
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.8
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 13,
+              "success_rate": 0.65,
+              "safety_violations": 2,
+              "mean_peak_force_n": 57.58459659958908,
+              "mean_reward": 55.39000325582924,
+              "contact_episodes": 19,
+              "contact_rate": 0.95,
+              "mean_contact_steps": 1157.75,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.04987618760743144,
+              "max_pose_estimate_age_s": 0.07400000000002471,
+              "pose_estimator_samples": 6864,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6844,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 13,
+              "success_rate": 0.65,
+              "safety_violations": 2,
+              "mean_peak_force_n": 57.19651758687375,
+              "mean_reward": 54.81978379480959,
+              "contact_episodes": 19,
+              "contact_rate": 0.95,
+              "mean_contact_steps": 1144.65,
+              "search_triggers": 17,
+              "recovery_successes": 11,
+              "mean_pose_estimate_age_s": 0.04988405560657837,
+              "max_pose_estimate_age_s": 0.07600000000002538,
+              "pose_estimator_samples": 6950,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6930,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.09999999999999998,
+          "paired_outcomes": {
+            "rescued": 0,
+            "harmed": 0,
+            "both_success": 13,
+            "neither": 7
+          }
+        },
+        "camera-combined": {
+          "label": "Latency + dropout + error",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.12,
+            "dropout_probability": 0.3,
+            "noise_std_m": [
+              0.0015,
+              0.0015,
+              0.0005
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.8
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 16,
+              "success_rate": 0.8,
+              "safety_violations": 1,
+              "mean_peak_force_n": 60.08797785400331,
+              "mean_reward": 66.10594786264643,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 883.85,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.14604264610096332,
+              "max_pose_estimate_age_s": 0.41999999999995374,
+              "pose_estimator_samples": 6653,
+              "pose_estimator_dropouts": 1929,
+              "pose_estimator_delivered_updates": 4675,
+              "pose_estimator_dropout_rate": 0.28994438599128214
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 12,
+              "success_rate": 0.6,
+              "safety_violations": 1,
+              "mean_peak_force_n": 59.742831516864804,
+              "mean_reward": 51.84703645219399,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 1553.95,
+              "search_triggers": 19,
+              "recovery_successes": 11,
+              "mean_pose_estimate_age_s": 0.14609849492421012,
+              "max_pose_estimate_age_s": 0.41999999999995374,
+              "pose_estimator_samples": 7351,
+              "pose_estimator_dropouts": 2148,
+              "pose_estimator_delivered_updates": 5157,
+              "pose_estimator_dropout_rate": 0.2922051421575296
+            }
+          },
+          "learned_success_delta_vs_oracle": 0.050000000000000044,
+          "paired_outcomes": {
+            "rescued": 0,
+            "harmed": 4,
+            "both_success": 12,
+            "neither": 4
+          }
+        }
+      },
+      "source": "pose-estimator-transfer-20261120/pose-estimator-result/pose_estimator_summary.json"
+    },
+    {
+      "seed": 20261121,
+      "episodes": 20,
+      "config": "configs/menagerie.toml",
+      "model": "source-training/residual_sac.zip",
+      "socket_clearance_m": 0.003,
+      "contact_detection_force_n": 1.0,
+      "search": {
+        "trigger_force_n": 5.0,
+        "radius_m": 0.007,
+        "entry_depth_m": 0.004
+      },
+      "insert_time_s": 12.0,
+      "episode_duration_s": 18.0,
+      "conditions": {
+        "oracle": {
+          "label": "Ideal pose",
+          "pose_estimator": {
+            "update_period_s": 0.002,
+            "latency_s": 0.0,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.0
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 15,
+              "success_rate": 0.75,
+              "safety_violations": 0,
+              "mean_peak_force_n": 25.89365403217615,
+              "mean_reward": 71.38925366021961,
+              "contact_episodes": 11,
+              "contact_rate": 0.55,
+              "mean_contact_steps": 124.95,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.0,
+              "max_pose_estimate_age_s": 0.0,
+              "pose_estimator_samples": 13228,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 13228,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 19,
+              "success_rate": 0.95,
+              "safety_violations": 0,
+              "mean_peak_force_n": 25.89365403217615,
+              "mean_reward": 81.38961705170792,
+              "contact_episodes": 11,
+              "contact_rate": 0.55,
+              "mean_contact_steps": 62.55,
+              "search_triggers": 5,
+              "recovery_successes": 5,
+              "mean_pose_estimate_age_s": 0.0,
+              "max_pose_estimate_age_s": 0.0,
+              "pose_estimator_samples": 12175,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 12175,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": 0.0,
+          "paired_outcomes": {
+            "rescued": 4,
+            "harmed": 0,
+            "both_success": 15,
+            "neither": 1
+          }
+        },
+        "camera-nominal": {
+          "label": "25 Hz camera",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.04,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0005,
+              0.0005,
+              0.00025
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.2
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 14,
+              "success_rate": 0.7,
+              "safety_violations": 0,
+              "mean_peak_force_n": 35.44658356235249,
+              "mean_reward": 64.05695525385181,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 1014.15,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.049877583740634904,
+              "max_pose_estimate_age_s": 0.07600000000002538,
+              "pose_estimator_samples": 6785,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6765,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 15,
+              "success_rate": 0.75,
+              "safety_violations": 0,
+              "mean_peak_force_n": 33.907037815896274,
+              "mean_reward": 66.0034445520707,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 1096.8,
+              "search_triggers": 17,
+              "recovery_successes": 12,
+              "mean_pose_estimate_age_s": 0.049889685090796144,
+              "max_pose_estimate_age_s": 0.07600000000002538,
+              "pose_estimator_samples": 6924,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6904,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.050000000000000044,
+          "paired_outcomes": {
+            "rescued": 1,
+            "harmed": 0,
+            "both_success": 14,
+            "neither": 5
+          }
+        },
+        "camera-latency": {
+          "label": "120 ms latency",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.12,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0005,
+              0.0005,
+              0.00025
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.2
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 14,
+              "success_rate": 0.7,
+              "safety_violations": 2,
+              "mean_peak_force_n": 81.58436452264576,
+              "mean_reward": 57.73953333380856,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 812.85,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.12923264870790735,
+              "max_pose_estimate_age_s": 0.1560000000000521,
+              "pose_estimator_samples": 6493,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6433,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 10,
+              "success_rate": 0.5,
+              "safety_violations": 2,
+              "mean_peak_force_n": 82.35210161152328,
+              "mean_reward": 45.285906930759346,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 1408.2,
+              "search_triggers": 18,
+              "recovery_successes": 10,
+              "mean_pose_estimate_age_s": 0.1293297138748401,
+              "max_pose_estimate_age_s": 0.15800000000005276,
+              "pose_estimator_samples": 7394,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 7334,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.050000000000000044,
+          "paired_outcomes": {
+            "rescued": 0,
+            "harmed": 4,
+            "both_success": 10,
+            "neither": 6
+          }
+        },
+        "camera-dropout": {
+          "label": "30% dropout",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.04,
+            "dropout_probability": 0.3,
+            "noise_std_m": [
+              0.0005,
+              0.0005,
+              0.00025
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.2
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 14,
+              "success_rate": 0.7,
+              "safety_violations": 1,
+              "mean_peak_force_n": 52.635728555241634,
+              "mean_reward": 63.339358758134026,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 836.6,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.06659454025588242,
+              "max_pose_estimate_age_s": 0.33999999999996255,
+              "pose_estimator_samples": 6604,
+              "pose_estimator_dropouts": 1928,
+              "pose_estimator_delivered_updates": 4661,
+              "pose_estimator_dropout_rate": 0.2919442761962447
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 11,
+              "success_rate": 0.55,
+              "safety_violations": 1,
+              "mean_peak_force_n": 52.6535627162008,
+              "mean_reward": 54.67420679256602,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 1323.65,
+              "search_triggers": 15,
+              "recovery_successes": 7,
+              "mean_pose_estimate_age_s": 0.06652473762298869,
+              "max_pose_estimate_age_s": 0.33999999999996255,
+              "pose_estimator_samples": 7387,
+              "pose_estimator_dropouts": 2152,
+              "pose_estimator_delivered_updates": 5219,
+              "pose_estimator_dropout_rate": 0.2913225937457696
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.050000000000000044,
+          "paired_outcomes": {
+            "rescued": 1,
+            "harmed": 4,
+            "both_success": 10,
+            "neither": 5
+          }
+        },
+        "camera-correlated": {
+          "label": "Correlated 1.5 mm error",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.04,
+            "dropout_probability": 0.0,
+            "noise_std_m": [
+              0.0015,
+              0.0015,
+              0.0005
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.8
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 13,
+              "success_rate": 0.65,
+              "safety_violations": 3,
+              "mean_peak_force_n": 80.66208472425916,
+              "mean_reward": 56.03043801551023,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 710.6,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.04988264082174188,
+              "max_pose_estimate_age_s": 0.07800000000002605,
+              "pose_estimator_samples": 6421,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6401,
+              "pose_estimator_dropout_rate": 0.0
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 13,
+              "success_rate": 0.65,
+              "safety_violations": 3,
+              "mean_peak_force_n": 79.09995181910263,
+              "mean_reward": 54.887058231037386,
+              "contact_episodes": 17,
+              "contact_rate": 0.85,
+              "mean_contact_steps": 802.3,
+              "search_triggers": 13,
+              "recovery_successes": 9,
+              "mean_pose_estimate_age_s": 0.04989107139730126,
+              "max_pose_estimate_age_s": 0.07800000000002605,
+              "pose_estimator_samples": 6494,
+              "pose_estimator_dropouts": 0,
+              "pose_estimator_delivered_updates": 6474,
+              "pose_estimator_dropout_rate": 0.0
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.09999999999999998,
+          "paired_outcomes": {
+            "rescued": 1,
+            "harmed": 1,
+            "both_success": 12,
+            "neither": 6
+          }
+        },
+        "camera-combined": {
+          "label": "Latency + dropout + error",
+          "pose_estimator": {
+            "update_period_s": 0.04,
+            "latency_s": 0.12,
+            "dropout_probability": 0.3,
+            "noise_std_m": [
+              0.0015,
+              0.0015,
+              0.0005
+            ],
+            "bias_m": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "correlation_time_s": 0.8
+          },
+          "policies": {
+            "learned": {
+              "episodes": 20,
+              "successes": 13,
+              "success_rate": 0.65,
+              "safety_violations": 1,
+              "mean_peak_force_n": 63.083137286954454,
+              "mean_reward": 52.8725824609872,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 1117.8,
+              "search_triggers": 0,
+              "recovery_successes": 0,
+              "mean_pose_estimate_age_s": 0.14583862594283786,
+              "max_pose_estimate_age_s": 0.41999999999995374,
+              "pose_estimator_samples": 6823,
+              "pose_estimator_dropouts": 1987,
+              "pose_estimator_delivered_updates": 4795,
+              "pose_estimator_dropout_rate": 0.29122087058478674
+            },
+            "learned-search": {
+              "episodes": 20,
+              "successes": 9,
+              "success_rate": 0.45,
+              "safety_violations": 1,
+              "mean_peak_force_n": 62.224237347101145,
+              "mean_reward": 39.528717360132745,
+              "contact_episodes": 20,
+              "contact_rate": 1.0,
+              "mean_contact_steps": 1682.5,
+              "search_triggers": 17,
+              "recovery_successes": 7,
+              "mean_pose_estimate_age_s": 0.14584980895560878,
+              "max_pose_estimate_age_s": 0.41999999999995374,
+              "pose_estimator_samples": 7616,
+              "pose_estimator_dropouts": 2199,
+              "pose_estimator_delivered_updates": 5373,
+              "pose_estimator_dropout_rate": 0.28873424369747897
+            }
+          },
+          "learned_success_delta_vs_oracle": -0.09999999999999998,
+          "paired_outcomes": {
+            "rescued": 0,
+            "harmed": 4,
+            "both_success": 9,
+            "neither": 7
+          }
+        }
+      },
+      "source": "pose-estimator-transfer-20261121/pose-estimator-result/pose_estimator_summary.json"
+    }
+  ]
+}
