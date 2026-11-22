@@ -16,7 +16,7 @@ CONDITIONS = (
     (
         "oracle",
         "Ideal pose",
-        PoseEstimatorConfig(update_period_s=0.02),
+        PoseEstimatorConfig(update_period_s=0.002),
     ),
     (
         "camera-nominal",

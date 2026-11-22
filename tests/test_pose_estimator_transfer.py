@@ -21,7 +21,7 @@ def estimator_config(condition_key: str) -> dict:
     }
     latency, dropout, noise, correlation = configs[condition_key]
     return {
-        "update_period_s": 0.02 if condition_key == "oracle" else 0.04,
+        "update_period_s": 0.002 if condition_key == "oracle" else 0.04,
         "latency_s": latency,
         "dropout_probability": dropout,
         "noise_std_m": noise,

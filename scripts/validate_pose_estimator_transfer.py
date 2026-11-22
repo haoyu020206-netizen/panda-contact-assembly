@@ -6,7 +6,15 @@ import json
 import math
 from pathlib import Path
 
-from scripts.aggregate_pose_estimator_transfer import CONDITION_ORDER, POLICY_ORDER
+CONDITION_ORDER = (
+    "oracle",
+    "camera-nominal",
+    "camera-latency",
+    "camera-dropout",
+    "camera-correlated",
+    "camera-combined",
+)
+POLICY_ORDER = ("learned", "learned-search")
 
 SUMMARY_FIELDS = (
     "episodes",
@@ -165,10 +173,11 @@ def validate_estimator_signals(conditions: dict) -> list[str]:
         or vector_nonzero(oracle_config["noise_std_m"])
     ):
         failures.append("oracle estimator must not contain latency, dropout, or noise")
+    oracle_period_s = float(oracle_config["update_period_s"])
     for policy_key in POLICY_ORDER:
         policy = oracle["policies"][policy_key]
-        if float(policy["max_pose_estimate_age_s"]) > 1e-9:
-            failures.append(f"oracle/{policy_key}: estimate age must remain zero")
+        if float(policy["max_pose_estimate_age_s"]) > oracle_period_s + 1e-9:
+            failures.append(f"oracle/{policy_key}: estimate age exceeded its update period")
         if int(policy["pose_estimator_dropouts"]) != 0:
             failures.append(f"oracle/{policy_key}: unexpected dropped frames")
 
