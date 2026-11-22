@@ -24,11 +24,48 @@ def load_json(path: Path) -> dict:
         return json.load(handle)
 
 
+def parse_bool(value: str) -> bool:
+    normalized = value.strip().lower()
+    if normalized in {"true", "1"}:
+        return True
+    if normalized in {"false", "0"}:
+        return False
+    raise ValueError(f"invalid boolean value {value!r}")
+
+
+def paired_outcomes(run_directory: Path, condition_key: str) -> dict[str, int]:
+    policy_rows = {}
+    for policy_key in POLICY_ORDER:
+        path = run_directory / condition_key / policy_key / "episodes.csv"
+        with path.open(newline="", encoding="utf-8") as handle:
+            policy_rows[policy_key] = list(csv.DictReader(handle))
+    learned = policy_rows["learned"]
+    searched = policy_rows["learned-search"]
+    outcomes = {"rescued": 0, "harmed": 0, "both_success": 0, "neither": 0}
+    for learned_row, search_row in zip(learned, searched, strict=True):
+        learned_success = parse_bool(learned_row["success"])
+        search_success = parse_bool(search_row["success"])
+        if not learned_success and search_success:
+            outcomes["rescued"] += 1
+        elif learned_success and not search_success:
+            outcomes["harmed"] += 1
+        elif learned_success and search_success:
+            outcomes["both_success"] += 1
+        else:
+            outcomes["neither"] += 1
+    return outcomes
+
+
 def discover_runs(root: Path) -> list[dict]:
     runs = []
     for summary_path in sorted(root.rglob("pose_estimator_summary.json")):
         summary = load_json(summary_path)
-        summary["source"] = str(summary_path)
+        for condition_key in CONDITION_ORDER:
+            summary["conditions"][condition_key]["paired_outcomes"] = paired_outcomes(
+                summary_path.parent,
+                condition_key,
+            )
+        summary["source"] = summary_path.relative_to(root).as_posix()
         runs.append(summary)
     if not runs:
         raise ValueError(f"no pose_estimator_summary.json files found under {root}")
@@ -101,10 +138,15 @@ def aggregate_runs(runs: list[dict]) -> dict:
             )
             for policy_key in POLICY_ORDER
         }
+        paired = {
+            field: sum(int(condition["paired_outcomes"][field]) for condition in seed_conditions)
+            for field in ("rescued", "harmed", "both_success", "neither")
+        }
         conditions[condition_key] = {
             "label": seed_conditions[0]["label"],
             "pose_estimator": estimator_config,
             "policies": policies,
+            "paired_outcomes": paired,
         }
     oracle_success = conditions["oracle"]["policies"]["learned"]["success_rate"]
     for condition in conditions.values():

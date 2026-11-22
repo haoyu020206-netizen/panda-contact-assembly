@@ -71,6 +71,12 @@ def run(seed: int) -> dict:
                     policy_key: policy_summary(condition_key, policy_key)
                     for policy_key in POLICY_ORDER
                 },
+                "paired_outcomes": {
+                    "rescued": 1,
+                    "harmed": 0,
+                    "both_success": 1,
+                    "neither": 0,
+                },
             }
             for condition_key in CONDITION_ORDER
         },
@@ -83,6 +89,12 @@ def test_pose_estimator_aggregate_and_acceptance(tmp_path) -> None:
     assert combined["episodes"] == 6
     assert combined["success_rate"] == 1.0
     assert combined["pose_estimator_dropout_rate"] == 0.3
+    assert aggregate["conditions"]["camera-combined"]["paired_outcomes"] == {
+        "rescued": 3,
+        "harmed": 0,
+        "both_success": 3,
+        "neither": 0,
+    }
 
     path = tmp_path / "aggregate.json"
     path.write_text(json.dumps(aggregate), encoding="utf-8")
@@ -93,6 +105,8 @@ def test_pose_estimator_aggregate_and_acceptance(tmp_path) -> None:
         min_evaluation_episodes=2,
         min_oracle_success_rate=0.5,
         min_combined_success_rate=0.5,
+        min_all_learned_success_rate=0.5,
+        max_learned_safety_violations_per_condition=0,
         max_combined_safety_violations=0,
         require_search_non_regression=True,
         require_estimator_signals=True,
@@ -114,8 +128,33 @@ def test_pose_estimator_acceptance_detects_missing_dropout(tmp_path) -> None:
         min_evaluation_episodes=2,
         min_oracle_success_rate=0.0,
         min_combined_success_rate=0.0,
+        min_all_learned_success_rate=0.0,
+        max_learned_safety_violations_per_condition=None,
         max_combined_safety_violations=None,
         require_search_non_regression=False,
         require_estimator_signals=True,
     )
     assert any("camera-dropout did not record frame loss" in failure for failure in failures)
+
+
+def test_pose_estimator_acceptance_checks_learned_policy_limits(tmp_path) -> None:
+    aggregate = aggregate_runs([run(11), run(12), run(13)])
+    aggregate["conditions"]["camera-combined"]["policies"]["learned"]["success_rate"] = 0.25
+    aggregate["conditions"]["camera-correlated"]["policies"]["learned"]["safety_violations"] = 1
+    path = tmp_path / "aggregate.json"
+    path.write_text(json.dumps(aggregate), encoding="utf-8")
+    failures = validate_aggregate(
+        path,
+        seed_results=None,
+        min_seeds=3,
+        min_evaluation_episodes=2,
+        min_oracle_success_rate=0.0,
+        min_combined_success_rate=0.5,
+        min_all_learned_success_rate=0.0,
+        max_learned_safety_violations_per_condition=0,
+        max_combined_safety_violations=None,
+        require_search_non_regression=False,
+        require_estimator_signals=False,
+    )
+    assert "combined-condition success below required minimum" in failures
+    assert "camera-correlated: learned safety violations exceed limit" in failures

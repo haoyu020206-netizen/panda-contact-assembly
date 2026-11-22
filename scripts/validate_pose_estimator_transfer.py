@@ -122,9 +122,38 @@ def validate_policy_files(
     return failures
 
 
-def validate_seed_results(root: Path, aggregate_seeds: set[int]) -> list[str]:
+def paired_outcomes(run_directory: Path, condition_key: str) -> dict[str, int]:
+    rows = {}
+    for policy_key in POLICY_ORDER:
+        path = run_directory / condition_key / policy_key / "episodes.csv"
+        with path.open(newline="", encoding="utf-8") as handle:
+            rows[policy_key] = list(csv.DictReader(handle))
+    outcomes = {"rescued": 0, "harmed": 0, "both_success": 0, "neither": 0}
+    for learned_row, search_row in zip(rows["learned"], rows["learned-search"], strict=True):
+        learned_success = parse_bool(learned_row["success"])
+        search_success = parse_bool(search_row["success"])
+        if not learned_success and search_success:
+            outcomes["rescued"] += 1
+        elif learned_success and not search_success:
+            outcomes["harmed"] += 1
+        elif learned_success and search_success:
+            outcomes["both_success"] += 1
+        else:
+            outcomes["neither"] += 1
+    return outcomes
+
+
+def validate_seed_results(
+    root: Path,
+    aggregate_seeds: set[int],
+    aggregate_conditions: dict,
+) -> list[str]:
     failures: list[str] = []
     found_seeds: set[int] = set()
+    paired_totals = {
+        condition_key: {"rescued": 0, "harmed": 0, "both_success": 0, "neither": 0}
+        for condition_key in CONDITION_ORDER
+    }
     for summary_path in sorted(root.rglob("pose_estimator_summary.json")):
         summary = load_json(summary_path)
         seed = int(summary["seed"])
@@ -152,10 +181,23 @@ def validate_seed_results(root: Path, aggregate_seeds: set[int]) -> list[str]:
                         episodes,
                     )
                 )
+            try:
+                seed_outcomes = paired_outcomes(summary_path.parent, condition_key)
+            except (FileNotFoundError, ValueError) as error:
+                failures.append(f"seed {seed}/{condition_key}: invalid paired episodes: {error}")
+            else:
+                for field, value in seed_outcomes.items():
+                    paired_totals[condition_key][field] += value
     if found_seeds != aggregate_seeds:
         failures.append(
             f"seed result identities {sorted(found_seeds)} != aggregate {sorted(aggregate_seeds)}"
         )
+    for condition_key, expected in paired_totals.items():
+        actual = aggregate_conditions[condition_key].get("paired_outcomes")
+        if actual != expected:
+            failures.append(
+                f"{condition_key}: aggregate paired outcomes disagree with episode CSVs"
+            )
     return failures
 
 
@@ -223,6 +265,8 @@ def validate_aggregate(
     min_evaluation_episodes: int,
     min_oracle_success_rate: float,
     min_combined_success_rate: float,
+    min_all_learned_success_rate: float,
+    max_learned_safety_violations_per_condition: int | None,
     max_combined_safety_violations: int | None,
     require_search_non_regression: bool,
     require_estimator_signals: bool,
@@ -255,10 +299,18 @@ def validate_aggregate(
                 failures.append(f"{condition_key}: search regressed success")
             if int(searched["safety_violations"]) > int(learned["safety_violations"]):
                 failures.append(f"{condition_key}: search regressed safety")
+        learned = policies["learned"]
+        if float(learned["success_rate"]) < min_all_learned_success_rate:
+            failures.append(f"{condition_key}: learned success below required minimum")
+        if (
+            max_learned_safety_violations_per_condition is not None
+            and int(learned["safety_violations"]) > max_learned_safety_violations_per_condition
+        ):
+            failures.append(f"{condition_key}: learned safety violations exceed limit")
     oracle_success = float(conditions["oracle"]["policies"]["learned"]["success_rate"])
     if oracle_success < min_oracle_success_rate:
         failures.append("oracle learned-policy success below required minimum")
-    combined = conditions["camera-combined"]["policies"]["learned-search"]
+    combined = conditions["camera-combined"]["policies"]["learned"]
     if float(combined["success_rate"]) < min_combined_success_rate:
         failures.append("combined-condition success below required minimum")
     if (
@@ -269,7 +321,7 @@ def validate_aggregate(
     if require_estimator_signals:
         failures.extend(validate_estimator_signals(conditions))
     if seed_results is not None:
-        failures.extend(validate_seed_results(seed_results, seeds))
+        failures.extend(validate_seed_results(seed_results, seeds, conditions))
     return failures
 
 
@@ -281,6 +333,8 @@ def main() -> None:
     parser.add_argument("--min-evaluation-episodes", type=int, default=1)
     parser.add_argument("--min-oracle-success-rate", type=float, default=0.0)
     parser.add_argument("--min-combined-success-rate", type=float, default=0.0)
+    parser.add_argument("--min-all-learned-success-rate", type=float, default=0.0)
+    parser.add_argument("--max-learned-safety-violations-per-condition", type=int)
     parser.add_argument("--max-combined-safety-violations", type=int)
     parser.add_argument("--require-search-non-regression", action="store_true")
     parser.add_argument("--require-estimator-signals", action="store_true")
@@ -292,6 +346,10 @@ def main() -> None:
         min_evaluation_episodes=args.min_evaluation_episodes,
         min_oracle_success_rate=args.min_oracle_success_rate,
         min_combined_success_rate=args.min_combined_success_rate,
+        min_all_learned_success_rate=args.min_all_learned_success_rate,
+        max_learned_safety_violations_per_condition=(
+            args.max_learned_safety_violations_per_condition
+        ),
         max_combined_safety_violations=args.max_combined_safety_violations,
         require_search_non_regression=args.require_search_non_regression,
         require_estimator_signals=args.require_estimator_signals,

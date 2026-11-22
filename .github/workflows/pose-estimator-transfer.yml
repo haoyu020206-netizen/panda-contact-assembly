@@ -121,6 +121,11 @@ jobs:
           --seed-results downloaded-results
           --min-seeds 3
           --min-evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --min-oracle-success-rate "${{ github.event_name == 'workflow_dispatch' && '0.75' || '0.0' }}"
+          --min-combined-success-rate "${{ github.event_name == 'workflow_dispatch' && '0.70' || '0.0' }}"
+          --min-all-learned-success-rate "${{ github.event_name == 'workflow_dispatch' && '0.60' || '0.0' }}"
+          --max-learned-safety-violations-per-condition 6
+          --max-combined-safety-violations "${{ github.event_name == 'workflow_dispatch' && '3' || '6' }}"
           --require-estimator-signals
 
       - name: Upload estimator summary
