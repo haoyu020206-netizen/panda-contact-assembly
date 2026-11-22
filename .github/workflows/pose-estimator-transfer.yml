@@ -1,0 +1,132 @@
+name: Pose Estimator Multi-Seed Transfer
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/pose-estimator-transfer.yml"
+      - "configs/*.toml"
+      - "pyproject.toml"
+      - "scripts/aggregate_pose_estimator_transfer.py"
+      - "scripts/evaluate_pose_estimator_transfer.py"
+      - "scripts/train_residual_sac.py"
+      - "scripts/validate_pose_estimator_transfer.py"
+      - "src/panda_assembly/contact_search.py"
+      - "src/panda_assembly/pose_estimation.py"
+      - "src/panda_assembly/residual_rl.py"
+      - "tests/test_pose_estimation.py"
+      - "tests/test_pose_estimator_transfer.py"
+      - "tests/test_residual_rl.py"
+  workflow_dispatch:
+    inputs:
+      timesteps:
+        description: MVP SAC environment steps per seed
+        required: true
+        default: "10000"
+        type: string
+      evaluation_episodes:
+        description: Episodes per estimator condition, policy, and seed
+        required: true
+        default: "20"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [20261119, 20261120, 20261121]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install residual RL dependencies
+        run: python -m pip install -e ".[rl]"
+
+      - name: Train seeded source policy
+        run: >-
+          python scripts/train_residual_sac.py
+          --config configs/mvp.toml
+          --output source-training
+          --timesteps "${{ inputs.timesteps || '500' }}"
+          --evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --bc-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --bc-epochs 20
+          --seed "${{ matrix.seed }}"
+          --rehearsal-mode teacher
+
+      - name: Evaluate explicit pose estimator
+        run: >-
+          python scripts/evaluate_pose_estimator_transfer.py
+          --model source-training/residual_sac.zip
+          --config configs/menagerie.toml
+          --output pose-estimator-result
+          --episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --seed "${{ matrix.seed }}"
+
+      - name: Upload seeded estimator result
+        uses: actions/upload-artifact@v7
+        with:
+          name: pose-estimator-transfer-${{ matrix.seed }}
+          path: |
+            source-training/residual_sac.zip
+            pose-estimator-result/
+          if-no-files-found: error
+          retention-days: 30
+
+  aggregate:
+    needs: evaluate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install plotting dependencies
+        run: python -m pip install -e ".[plot]"
+
+      - name: Download seeded results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: pose-estimator-transfer-*
+          path: downloaded-results
+
+      - name: Aggregate estimator transfer
+        run: >-
+          python scripts/aggregate_pose_estimator_transfer.py
+          downloaded-results
+          --output pose-estimator-summary
+
+      - name: Validate estimator evidence
+        run: >-
+          python scripts/validate_pose_estimator_transfer.py
+          pose-estimator-summary/pose_estimator_aggregate.json
+          --seed-results downloaded-results
+          --min-seeds 3
+          --min-evaluation-episodes "${{ inputs.evaluation_episodes || '2' }}"
+          --require-estimator-signals
+
+      - name: Upload estimator summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: pose-estimator-transfer-summary
+          path: pose-estimator-summary/
+          if-no-files-found: error
+          retention-days: 30
