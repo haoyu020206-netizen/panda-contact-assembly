@@ -12,31 +12,20 @@ from pathlib import Path
 from statistics import mean
 
 import numpy as np
-from render_paired_recovery_demo import (
-    CHECKPOINT_SHA256,
-    FORCE_TRIGGER_N,
-    MAX_RECOVERY_POSE_AGE_S,
-    SEED,
-    Replay,
-    record,
-    replay_environment,
-    verify,
-)
-from stable_baselines3 import SAC
-
-from panda_assembly.contact_search import SpiralResidualPolicy, StallTriggerConfig
 
 POLICIES = ("learned", "search-compensated", "search-stall")
 
 
-def trigger_context(replay: Replay, lookahead: Replay, horizon_s: float) -> dict | None:
-    trigger_s = replay.summary["trigger_time_s"]
-    if trigger_s is None:
+def trigger_context(rows: list[dict], baseline_rows: list[dict], horizon_s: float) -> dict | None:
+    row = next((sample for sample in rows if sample["search_triggered"]), None)
+    if row is None:
         return None
-    row = next(row for row in replay.rows if row["search_triggered"])
-    index = int(np.searchsorted(lookahead.times, trigger_s))
+    trigger_s = row["time_s"]
+    tolerance_s = 1e-9  # Include the sample at the window boundary despite clock rounding.
     reference_rows = [
-        sample for sample in lookahead.rows[index:] if sample["time_s"] <= trigger_s + horizon_s
+        sample
+        for sample in baseline_rows
+        if trigger_s - tolerance_s <= sample["time_s"] <= trigger_s + horizon_s + tolerance_s
     ]
     progress_mm = None
     if reference_rows:
@@ -53,6 +42,19 @@ def trigger_context(replay: Replay, lookahead: Replay, horizon_s: float) -> dict
 
 
 def run(model_path: Path, reference: Path, output: Path) -> dict:
+    from render_paired_recovery_demo import (
+        CHECKPOINT_SHA256,
+        FORCE_TRIGGER_N,
+        MAX_RECOVERY_POSE_AGE_S,
+        SEED,
+        record,
+        replay_environment,
+        verify,
+    )
+    from stable_baselines3 import SAC
+
+    from panda_assembly.contact_search import SpiralResidualPolicy, StallTriggerConfig
+
     if hashlib.sha256(model_path.read_bytes()).hexdigest() != CHECKPOINT_SHA256:
         raise ValueError("checkpoint differs from the archived 20261119 policy")
     model = SAC.load(model_path, device="cpu")
@@ -127,8 +129,10 @@ def run(model_path: Path, reference: Path, output: Path) -> dict:
                     "outcomes": {
                         key: trace.summary for key, trace in zip(POLICIES, replay, strict=True)
                     },
-                    "old_trigger": trigger_context(old, off, stall.contact_duration_s),
-                    "stall_trigger": trigger_context(candidate, off, stall.contact_duration_s),
+                    "old_trigger": trigger_context(old.rows, off.rows, stall.contact_duration_s),
+                    "stall_trigger": trigger_context(
+                        candidate.rows, off.rows, stall.contact_duration_s
+                    ),
                     "stall_decisions": dict(
                         Counter(row["trigger_decision"] for row in candidate.rows)
                     ),

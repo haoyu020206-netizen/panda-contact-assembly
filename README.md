@@ -308,6 +308,12 @@ with search off. The compensated wrapper remains opt-in for this benchmark.
 [Machine-readable results](docs/results/pose-aware-recovery/recovery-comparison.json)
 and [cloud run with episode records](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/45476321699).
 
+On 20 archived development cases, a persistent-contact and stalled-progress trigger
+reduced search interventions from 11 to 5 and restored success from 8/20 to the
+search-off baseline of 14/20. It rescued zero baseline failures. The optional trigger,
+case-by-case timing and force results are in the
+[stall-trigger development report](docs/results/stall-trigger-development/README.md).
+
 ## 已实现
 
 - 自带无网格依赖的 7-DoF Panda 风格 MJCF，可立即验证控制代码；
@@ -497,7 +503,7 @@ tests/                            # 配置、数学、轨迹与模型测试
 
 ## 后续升级顺序
 
-1. 比较基于持续接触力和插入进度停滞的触发条件，验证能否减少搜索对正常插入的干预；
+1. 用未参与开发的新扰动复验停滞触发器，比较配对救回、额外失败和超力终止；
 2. 用渲染的标记点/相机图像替代 simulator-derived measurement source，并标定相机外参；
 3. 加入 Menagerie 域随机化和少量目标域微调，并和零样本迁移做严格消融；
 4. 扩大训练种子后报告置信区间，并把感知误差和控制失效做分层分析；
