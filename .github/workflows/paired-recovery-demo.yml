@@ -1,0 +1,60 @@
+name: Paired Recovery Demo
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/paired-recovery-demo.yml"
+      - "scripts/render_paired_recovery_demo.py"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MUJOCO_GL: osmesa
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install simulation and rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libosmesa6-dev ffmpeg fonts-dejavu-core
+          python -m pip install -e ".[rl]" mujoco==4.0.1 numpy==2.5.5 gymnasium==1.4.0 stable-baselines3==2.9.2 torch==2.15.0
+      - uses: actions/download-artifact@v8
+        with:
+          name: pose-estimator-transfer-20261119
+          path: checkpoint
+          run-id: 45056792299
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: pose-aware-recovery-20261119
+          path: reference
+          run-id: 45476321699
+          github-token: ${{ github.token }}
+      - name: Replay, verify, and render paired insertion
+        run: >-
+          python scripts/render_paired_recovery_demo.py
+          --model checkpoint/source-training/residual_sac.zip
+          --reference reference/20261119/camera-combined
+          --output paired-recovery-demo
+      - name: Inspect encoded video
+        run: >-
+          ffprobe -v error -show_entries
+          stream=width,height,codec_name:format=duration
+          -of json paired-recovery-demo/paired-recovery.mp4
+      - uses: actions/upload-artifact@v7
+        with:
+          name: paired-recovery-demo
+          path: paired-recovery-demo/
+          if-no-files-found: error
