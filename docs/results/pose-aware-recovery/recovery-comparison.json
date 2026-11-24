@@ -1,0 +1,464 @@
+{
+  "seeds": [
+    20261119,
+    20261120,
+    20261121
+  ],
+  "model_sha256": {
+    "20261119": "c82dfc9cef31b52fb8219e57cb87df156653f2db5a2f5558e2889f7f3efacccd",
+    "20261120": "56fef2e808539d5477eee59d71c6f127ef19e97292bd16b45589b670c4988e4c",
+    "20261121": "4e2048beaf79e03895f72444837ab5bc7b625e7fc24838a53f3ceb1c6ff28d5a"
+  },
+  "conditions": {
+    "oracle": {
+      "label": "Ideal pose",
+      "policies": {
+        "learned": {
+          "episodes": 60,
+          "successes": 47,
+          "safety_terminations": 2,
+          "mean_peak_force_n": 34.64300985385945,
+          "search_triggers": 0,
+          "successes_by_seed": [
+            17,
+            15,
+            15
+          ]
+        },
+        "learned-search": {
+          "episodes": 60,
+          "successes": 56,
+          "safety_terminations": 2,
+          "mean_peak_force_n": 35.55724677328574,
+          "search_triggers": 24,
+          "successes_by_seed": [
+            18,
+            19,
+            19
+          ]
+        },
+        "search-depth": {
+          "episodes": 60,
+          "successes": 50,
+          "safety_terminations": 2,
+          "mean_peak_force_n": 34.28462686659812,
+          "search_triggers": 12,
+          "successes_by_seed": [
+            18,
+            17,
+            15
+          ]
+        },
+        "search-compensated": {
+          "episodes": 60,
+          "successes": 50,
+          "safety_terminations": 2,
+          "mean_peak_force_n": 34.28462686659812,
+          "search_triggers": 12,
+          "successes_by_seed": [
+            18,
+            17,
+            15
+          ]
+        }
+      },
+      "compensated_vs_legacy": {
+        "rescued": 0,
+        "harmed": 6
+      },
+      "compensated_vs_no_search": {
+        "rescued": 3,
+        "harmed": 0
+      },
+      "compensated_vs_depth": {
+        "rescued": 0,
+        "harmed": 0
+      },
+      "baseline_changes_vs_previous_run": {
+        "learned": {
+          "rescued": 0,
+          "harmed": 0
+        },
+        "learned-search": {
+          "rescued": 0,
+          "harmed": 0
+        }
+      }
+    },
+    "camera-nominal": {
+      "label": "25 Hz camera",
+      "policies": {
+        "learned": {
+          "episodes": 60,
+          "successes": 45,
+          "safety_terminations": 0,
+          "mean_peak_force_n": 37.69956309283605,
+          "search_triggers": 0,
+          "successes_by_seed": [
+            15,
+            16,
+            14
+          ]
+        },
+        "learned-search": {
+          "episodes": 60,
+          "successes": 46,
+          "safety_terminations": 0,
+          "mean_peak_force_n": 37.13292585780506,
+          "search_triggers": 46,
+          "successes_by_seed": [
+            15,
+            16,
+            15
+          ]
+        },
+        "search-depth": {
+          "episodes": 60,
+          "successes": 41,
+          "safety_terminations": 0,
+          "mean_peak_force_n": 37.67584441898078,
+          "search_triggers": 23,
+          "successes_by_seed": [
+            15,
+            12,
+            14
+          ]
+        },
+        "search-compensated": {
+          "episodes": 60,
+          "successes": 41,
+          "safety_terminations": 0,
+          "mean_peak_force_n": 37.67584441898078,
+          "search_triggers": 22,
+          "successes_by_seed": [
+            15,
+            12,
+            14
+          ]
+        }
+      },
+      "compensated_vs_legacy": {
+        "rescued": 0,
+        "harmed": 5
+      },
+      "compensated_vs_no_search": {
+        "rescued": 0,
+        "harmed": 4
+      },
+      "compensated_vs_depth": {
+        "rescued": 0,
+        "harmed": 0
+      },
+      "baseline_changes_vs_previous_run": {
+        "learned": {
+          "rescued": 0,
+          "harmed": 0
+        },
+        "learned-search": {
+          "rescued": 0,
+          "harmed": 0
+        }
+      }
+    },
+    "camera-latency": {
+      "label": "120 ms latency",
+      "policies": {
+        "learned": {
+          "episodes": 60,
+          "successes": 44,
+          "safety_terminations": 3,
+          "mean_peak_force_n": 71.32151440812935,
+          "search_triggers": 0,
+          "successes_by_seed": [
+            15,
+            15,
+            14
+          ]
+        },
+        "learned-search": {
+          "episodes": 60,
+          "successes": 30,
+          "safety_terminations": 3,
+          "mean_peak_force_n": 70.77235558055624,
+          "search_triggers": 54,
+          "successes_by_seed": [
+            9,
+            11,
+            10
+          ]
+        },
+        "search-depth": {
+          "episodes": 60,
+          "successes": 28,
+          "safety_terminations": 3,
+          "mean_peak_force_n": 69.81676874608482,
+          "search_triggers": 38,
+          "successes_by_seed": [
+            9,
+            11,
+            8
+          ]
+        },
+        "search-compensated": {
+          "episodes": 60,
+          "successes": 31,
+          "safety_terminations": 3,
+          "mean_peak_force_n": 70.46903108270241,
+          "search_triggers": 35,
+          "successes_by_seed": [
+            9,
+            12,
+            10
+          ]
+        }
+      },
+      "compensated_vs_legacy": {
+        "rescued": 1,
+        "harmed": 0
+      },
+      "compensated_vs_no_search": {
+        "rescued": 0,
+        "harmed": 13
+      },
+      "compensated_vs_depth": {
+        "rescued": 3,
+        "harmed": 0
+      },
+      "baseline_changes_vs_previous_run": {
+        "learned": {
+          "rescued": 0,
+          "harmed": 0
+        },
+        "learned-search": {
+          "rescued": 0,
+          "harmed": 0
+        }
+      }
+    },
+    "camera-dropout": {
+      "label": "30% dropout",
+      "policies": {
+        "learned": {
+          "episodes": 60,
+          "successes": 42,
+          "safety_terminations": 2,
+          "mean_peak_force_n": 47.48378176900748,
+          "search_triggers": 0,
+          "successes_by_seed": [
+            14,
+            14,
+            14
+          ]
+        },
+        "learned-search": {
+          "episodes": 60,
+          "successes": 39,
+          "safety_terminations": 2,
+          "mean_peak_force_n": 47.50316885583696,
+          "search_triggers": 45,
+          "successes_by_seed": [
+            13,
+            15,
+            11
+          ]
+        },
+        "search-depth": {
+          "episodes": 60,
+          "successes": 36,
+          "safety_terminations": 2,
+          "mean_peak_force_n": 47.389203143320664,
+          "search_triggers": 24,
+          "successes_by_seed": [
+            12,
+            14,
+            10
+          ]
+        },
+        "search-compensated": {
+          "episodes": 60,
+          "successes": 37,
+          "safety_terminations": 2,
+          "mean_peak_force_n": 47.40581455490252,
+          "search_triggers": 22,
+          "successes_by_seed": [
+            12,
+            14,
+            11
+          ]
+        }
+      },
+      "compensated_vs_legacy": {
+        "rescued": 1,
+        "harmed": 3
+      },
+      "compensated_vs_no_search": {
+        "rescued": 0,
+        "harmed": 5
+      },
+      "compensated_vs_depth": {
+        "rescued": 1,
+        "harmed": 0
+      },
+      "baseline_changes_vs_previous_run": {
+        "learned": {
+          "rescued": 0,
+          "harmed": 0
+        },
+        "learned-search": {
+          "rescued": 0,
+          "harmed": 0
+        }
+      }
+    },
+    "camera-correlated": {
+      "label": "Correlated 1.5 mm error",
+      "policies": {
+        "learned": {
+          "episodes": 60,
+          "successes": 38,
+          "safety_terminations": 6,
+          "mean_peak_force_n": 70.63429517534051,
+          "search_triggers": 0,
+          "successes_by_seed": [
+            12,
+            13,
+            13
+          ]
+        },
+        "learned-search": {
+          "episodes": 60,
+          "successes": 39,
+          "safety_terminations": 6,
+          "mean_peak_force_n": 70.07082111136741,
+          "search_triggers": 47,
+          "successes_by_seed": [
+            13,
+            13,
+            13
+          ]
+        },
+        "search-depth": {
+          "episodes": 60,
+          "successes": 31,
+          "safety_terminations": 6,
+          "mean_peak_force_n": 70.6866821240618,
+          "search_triggers": 24,
+          "successes_by_seed": [
+            9,
+            13,
+            9
+          ]
+        },
+        "search-compensated": {
+          "episodes": 60,
+          "successes": 31,
+          "safety_terminations": 6,
+          "mean_peak_force_n": 70.6866821240618,
+          "search_triggers": 24,
+          "successes_by_seed": [
+            9,
+            13,
+            9
+          ]
+        }
+      },
+      "compensated_vs_legacy": {
+        "rescued": 0,
+        "harmed": 8
+      },
+      "compensated_vs_no_search": {
+        "rescued": 0,
+        "harmed": 7
+      },
+      "compensated_vs_depth": {
+        "rescued": 0,
+        "harmed": 0
+      },
+      "baseline_changes_vs_previous_run": {
+        "learned": {
+          "rescued": 0,
+          "harmed": 0
+        },
+        "learned-search": {
+          "rescued": 0,
+          "harmed": 0
+        }
+      }
+    },
+    "camera-combined": {
+      "label": "Latency + dropout + error",
+      "policies": {
+        "learned": {
+          "episodes": 60,
+          "successes": 43,
+          "safety_terminations": 3,
+          "mean_peak_force_n": 62.27425729718343,
+          "search_triggers": 0,
+          "successes_by_seed": [
+            14,
+            16,
+            13
+          ]
+        },
+        "learned-search": {
+          "episodes": 60,
+          "successes": 27,
+          "safety_terminations": 3,
+          "mean_peak_force_n": 62.54155622294557,
+          "search_triggers": 55,
+          "successes_by_seed": [
+            6,
+            12,
+            9
+          ]
+        },
+        "search-depth": {
+          "episodes": 60,
+          "successes": 25,
+          "safety_terminations": 3,
+          "mean_peak_force_n": 61.45820990795065,
+          "search_triggers": 36,
+          "successes_by_seed": [
+            6,
+            11,
+            8
+          ]
+        },
+        "search-compensated": {
+          "episodes": 60,
+          "successes": 31,
+          "safety_terminations": 3,
+          "mean_peak_force_n": 62.03245659245021,
+          "search_triggers": 29,
+          "successes_by_seed": [
+            8,
+            14,
+            9
+          ]
+        }
+      },
+      "compensated_vs_legacy": {
+        "rescued": 4,
+        "harmed": 0
+      },
+      "compensated_vs_no_search": {
+        "rescued": 0,
+        "harmed": 12
+      },
+      "compensated_vs_depth": {
+        "rescued": 6,
+        "harmed": 0
+      },
+      "baseline_changes_vs_previous_run": {
+        "learned": {
+          "rescued": 0,
+          "harmed": 0
+        },
+        "learned-search": {
+          "rescued": 0,
+          "harmed": 0
+        }
+      }
+    }
+  }
+}
