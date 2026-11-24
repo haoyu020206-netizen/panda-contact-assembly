@@ -1,0 +1,567 @@
+{
+  "protocol_sha256": "43d78b9554928b1939aae200fbccb98176093f16da77c74725c3bf5d550373a0",
+  "paired_cases": 180,
+  "total_policy_episodes": 360,
+  "manifests": {
+    "20261119": {
+      "checkpoint": "20261119",
+      "checkpoint_sha256": "c82dfc9cef31b52fb8219e57cb87df156653f2db5a2f5558e2889f7f3efacccd",
+      "protocol_sha256": "43d78b9554928b1939aae200fbccb98176093f16da77c74725c3bf5d550373a0",
+      "reset_seeds": [
+        7300100,
+        7300101,
+        7300102,
+        7300103,
+        7300104,
+        7300105,
+        7300106,
+        7300107,
+        7300108,
+        7300109,
+        7300110,
+        7300111,
+        7300112,
+        7300113,
+        7300114,
+        7300115,
+        7300116,
+        7300117,
+        7300118,
+        7300119
+      ],
+      "estimators": {
+        "oracle": {
+          "update_period_s": 0.002,
+          "latency_s": 0.0,
+          "dropout_probability": 0.0,
+          "noise_std_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "bias_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "correlation_time_s": 0.0
+        },
+        "camera-latency": {
+          "update_period_s": 0.04,
+          "latency_s": 0.12,
+          "dropout_probability": 0.0,
+          "noise_std_m": [
+            0.0005,
+            0.0005,
+            0.00025
+          ],
+          "bias_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "correlation_time_s": 0.2
+        },
+        "camera-combined": {
+          "update_period_s": 0.04,
+          "latency_s": 0.12,
+          "dropout_probability": 0.3,
+          "noise_std_m": [
+            0.0015,
+            0.0015,
+            0.0005
+          ],
+          "bias_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "correlation_time_s": 0.8
+        }
+      }
+    },
+    "20261120": {
+      "checkpoint": "20261120",
+      "checkpoint_sha256": "56fef2e808539d5477eee59d71c6f127ef19e97292bd16b45589b670c4988e4c",
+      "protocol_sha256": "43d78b9554928b1939aae200fbccb98176093f16da77c74725c3bf5d550373a0",
+      "reset_seeds": [
+        7300200,
+        7300201,
+        7300202,
+        7300203,
+        7300204,
+        7300205,
+        7300206,
+        7300207,
+        7300208,
+        7300209,
+        7300210,
+        7300211,
+        7300212,
+        7300213,
+        7300214,
+        7300215,
+        7300216,
+        7300217,
+        7300218,
+        7300219
+      ],
+      "estimators": {
+        "oracle": {
+          "update_period_s": 0.002,
+          "latency_s": 0.0,
+          "dropout_probability": 0.0,
+          "noise_std_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "bias_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "correlation_time_s": 0.0
+        },
+        "camera-latency": {
+          "update_period_s": 0.04,
+          "latency_s": 0.12,
+          "dropout_probability": 0.0,
+          "noise_std_m": [
+            0.0005,
+            0.0005,
+            0.00025
+          ],
+          "bias_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "correlation_time_s": 0.2
+        },
+        "camera-combined": {
+          "update_period_s": 0.04,
+          "latency_s": 0.12,
+          "dropout_probability": 0.3,
+          "noise_std_m": [
+            0.0015,
+            0.0015,
+            0.0005
+          ],
+          "bias_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "correlation_time_s": 0.8
+        }
+      }
+    },
+    "20261121": {
+      "checkpoint": "20261121",
+      "checkpoint_sha256": "4e2048beaf79e03895f72444837ab5bc7b625e7fc24838a53f3ceb1c6ff28d5a",
+      "protocol_sha256": "43d78b9554928b1939aae200fbccb98176093f16da77c74725c3bf5d550373a0",
+      "reset_seeds": [
+        7300300,
+        7300301,
+        7300302,
+        7300303,
+        7300304,
+        7300305,
+        7300306,
+        7300307,
+        7300308,
+        7300309,
+        7300310,
+        7300311,
+        7300312,
+        7300313,
+        7300314,
+        7300315,
+        7300316,
+        7300317,
+        7300318,
+        7300319
+      ],
+      "estimators": {
+        "oracle": {
+          "update_period_s": 0.002,
+          "latency_s": 0.0,
+          "dropout_probability": 0.0,
+          "noise_std_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "bias_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "correlation_time_s": 0.0
+        },
+        "camera-latency": {
+          "update_period_s": 0.04,
+          "latency_s": 0.12,
+          "dropout_probability": 0.0,
+          "noise_std_m": [
+            0.0005,
+            0.0005,
+            0.00025
+          ],
+          "bias_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "correlation_time_s": 0.2
+        },
+        "camera-combined": {
+          "update_period_s": 0.04,
+          "latency_s": 0.12,
+          "dropout_probability": 0.3,
+          "noise_std_m": [
+            0.0015,
+            0.0015,
+            0.0005
+          ],
+          "bias_m": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "correlation_time_s": 0.8
+        }
+      }
+    }
+  },
+  "conditions": {
+    "oracle": {
+      "pairs": 60,
+      "rescued": 0,
+      "harmed": 0,
+      "net_rescues": 0,
+      "new_safety_terminations": 0,
+      "mean_paired_peak_force_delta_n": 0.0,
+      "max_paired_peak_force_increase_n": 0.0,
+      "policies": {
+        "search_off": {
+          "successes": 52,
+          "search_triggers": 0,
+          "safety_terminations": 0,
+          "mean_episode_peak_force_n": 14.96618594457181,
+          "maximum_episode_peak_force_n": 78.25091842369159
+        },
+        "stall_trigger": {
+          "successes": 52,
+          "search_triggers": 1,
+          "safety_terminations": 0,
+          "mean_episode_peak_force_n": 14.96618594457181,
+          "maximum_episode_peak_force_n": 78.25091842369159
+        }
+      },
+      "distinct_disturbances": 60,
+      "per_checkpoint": {
+        "20261119": {
+          "pairs": 20,
+          "rescued": 0,
+          "harmed": 0,
+          "net_rescues": 0,
+          "new_safety_terminations": 0,
+          "mean_paired_peak_force_delta_n": 0.0,
+          "max_paired_peak_force_increase_n": 0.0,
+          "policies": {
+            "search_off": {
+              "successes": 18,
+              "search_triggers": 0,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 10.466231125670483,
+              "maximum_episode_peak_force_n": 67.44354094579337
+            },
+            "stall_trigger": {
+              "successes": 18,
+              "search_triggers": 0,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 10.466231125670483,
+              "maximum_episode_peak_force_n": 67.44354094579337
+            }
+          }
+        },
+        "20261120": {
+          "pairs": 20,
+          "rescued": 0,
+          "harmed": 0,
+          "net_rescues": 0,
+          "new_safety_terminations": 0,
+          "mean_paired_peak_force_delta_n": 0.0,
+          "max_paired_peak_force_increase_n": 0.0,
+          "policies": {
+            "search_off": {
+              "successes": 17,
+              "search_triggers": 0,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 23.968508749450134,
+              "maximum_episode_peak_force_n": 78.25091842369159
+            },
+            "stall_trigger": {
+              "successes": 17,
+              "search_triggers": 1,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 23.968508749450134,
+              "maximum_episode_peak_force_n": 78.25091842369159
+            }
+          }
+        },
+        "20261121": {
+          "pairs": 20,
+          "rescued": 0,
+          "harmed": 0,
+          "net_rescues": 0,
+          "new_safety_terminations": 0,
+          "mean_paired_peak_force_delta_n": 0.0,
+          "max_paired_peak_force_increase_n": 0.0,
+          "policies": {
+            "search_off": {
+              "successes": 17,
+              "search_triggers": 0,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 10.463817958594811,
+              "maximum_episode_peak_force_n": 65.12870895153387
+            },
+            "stall_trigger": {
+              "successes": 17,
+              "search_triggers": 0,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 10.463817958594811,
+              "maximum_episode_peak_force_n": 65.12870895153387
+            }
+          }
+        }
+      }
+    },
+    "camera-latency": {
+      "pairs": 60,
+      "rescued": 0,
+      "harmed": 0,
+      "net_rescues": 0,
+      "new_safety_terminations": 0,
+      "mean_paired_peak_force_delta_n": 0.0,
+      "max_paired_peak_force_increase_n": 0.0,
+      "policies": {
+        "search_off": {
+          "successes": 49,
+          "search_triggers": 0,
+          "safety_terminations": 1,
+          "mean_episode_peak_force_n": 49.076290121173265,
+          "maximum_episode_peak_force_n": 417.5560331085038
+        },
+        "stall_trigger": {
+          "successes": 49,
+          "search_triggers": 10,
+          "safety_terminations": 1,
+          "mean_episode_peak_force_n": 49.076290121173265,
+          "maximum_episode_peak_force_n": 417.5560331085038
+        }
+      },
+      "distinct_disturbances": 60,
+      "per_checkpoint": {
+        "20261119": {
+          "pairs": 20,
+          "rescued": 0,
+          "harmed": 0,
+          "net_rescues": 0,
+          "new_safety_terminations": 0,
+          "mean_paired_peak_force_delta_n": 0.0,
+          "max_paired_peak_force_increase_n": 0.0,
+          "policies": {
+            "search_off": {
+              "successes": 17,
+              "search_triggers": 0,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 38.4529120499802,
+              "maximum_episode_peak_force_n": 104.29369311309037
+            },
+            "stall_trigger": {
+              "successes": 17,
+              "search_triggers": 3,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 38.4529120499802,
+              "maximum_episode_peak_force_n": 104.29369311309037
+            }
+          }
+        },
+        "20261120": {
+          "pairs": 20,
+          "rescued": 0,
+          "harmed": 0,
+          "net_rescues": 0,
+          "new_safety_terminations": 0,
+          "mean_paired_peak_force_delta_n": 0.0,
+          "max_paired_peak_force_increase_n": 0.0,
+          "policies": {
+            "search_off": {
+              "successes": 16,
+              "search_triggers": 0,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 42.15632971915803,
+              "maximum_episode_peak_force_n": 73.94581239343394
+            },
+            "stall_trigger": {
+              "successes": 16,
+              "search_triggers": 4,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 42.15632971915803,
+              "maximum_episode_peak_force_n": 73.94581239343394
+            }
+          }
+        },
+        "20261121": {
+          "pairs": 20,
+          "rescued": 0,
+          "harmed": 0,
+          "net_rescues": 0,
+          "new_safety_terminations": 0,
+          "mean_paired_peak_force_delta_n": 0.0,
+          "max_paired_peak_force_increase_n": 0.0,
+          "policies": {
+            "search_off": {
+              "successes": 16,
+              "search_triggers": 0,
+              "safety_terminations": 1,
+              "mean_episode_peak_force_n": 66.61962859438155,
+              "maximum_episode_peak_force_n": 417.5560331085038
+            },
+            "stall_trigger": {
+              "successes": 16,
+              "search_triggers": 3,
+              "safety_terminations": 1,
+              "mean_episode_peak_force_n": 66.61962859438155,
+              "maximum_episode_peak_force_n": 417.5560331085038
+            }
+          }
+        }
+      }
+    },
+    "camera-combined": {
+      "pairs": 60,
+      "rescued": 0,
+      "harmed": 0,
+      "net_rescues": 0,
+      "new_safety_terminations": 0,
+      "mean_paired_peak_force_delta_n": 0.0,
+      "max_paired_peak_force_increase_n": 0.0,
+      "policies": {
+        "search_off": {
+          "successes": 46,
+          "search_triggers": 0,
+          "safety_terminations": 4,
+          "mean_episode_peak_force_n": 68.89073789296559,
+          "maximum_episode_peak_force_n": 439.3959622902527
+        },
+        "stall_trigger": {
+          "successes": 46,
+          "search_triggers": 7,
+          "safety_terminations": 4,
+          "mean_episode_peak_force_n": 68.89073789296559,
+          "maximum_episode_peak_force_n": 439.3959622902527
+        }
+      },
+      "distinct_disturbances": 60,
+      "per_checkpoint": {
+        "20261119": {
+          "pairs": 20,
+          "rescued": 0,
+          "harmed": 0,
+          "net_rescues": 0,
+          "new_safety_terminations": 0,
+          "mean_paired_peak_force_delta_n": 0.0,
+          "max_paired_peak_force_increase_n": 0.0,
+          "policies": {
+            "search_off": {
+              "successes": 14,
+              "search_triggers": 0,
+              "safety_terminations": 3,
+              "mean_episode_peak_force_n": 93.0340456385768,
+              "maximum_episode_peak_force_n": 439.3959622902527
+            },
+            "stall_trigger": {
+              "successes": 14,
+              "search_triggers": 3,
+              "safety_terminations": 3,
+              "mean_episode_peak_force_n": 93.0340456385768,
+              "maximum_episode_peak_force_n": 439.3959622902527
+            }
+          }
+        },
+        "20261120": {
+          "pairs": 20,
+          "rescued": 0,
+          "harmed": 0,
+          "net_rescues": 0,
+          "new_safety_terminations": 0,
+          "mean_paired_peak_force_delta_n": 0.0,
+          "max_paired_peak_force_increase_n": 0.0,
+          "policies": {
+            "search_off": {
+              "successes": 17,
+              "search_triggers": 0,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 44.84226081687243,
+              "maximum_episode_peak_force_n": 73.7400098475868
+            },
+            "stall_trigger": {
+              "successes": 17,
+              "search_triggers": 1,
+              "safety_terminations": 0,
+              "mean_episode_peak_force_n": 44.84226081687243,
+              "maximum_episode_peak_force_n": 73.7400098475868
+            }
+          }
+        },
+        "20261121": {
+          "pairs": 20,
+          "rescued": 0,
+          "harmed": 0,
+          "net_rescues": 0,
+          "new_safety_terminations": 0,
+          "mean_paired_peak_force_delta_n": 0.0,
+          "max_paired_peak_force_increase_n": 0.0,
+          "policies": {
+            "search_off": {
+              "successes": 15,
+              "search_triggers": 0,
+              "safety_terminations": 1,
+              "mean_episode_peak_force_n": 68.79590722344754,
+              "maximum_episode_peak_force_n": 415.97295322241183
+            },
+            "stall_trigger": {
+              "successes": 15,
+              "search_triggers": 3,
+              "safety_terminations": 1,
+              "mean_episode_peak_force_n": 68.79590722344754,
+              "maximum_episode_peak_force_n": 415.97295322241183
+            }
+          }
+        }
+      }
+    }
+  },
+  "decision": {
+    "accepted": false,
+    "policy": "search_off",
+    "checks": {
+      "oracle": {
+        "net_rescue_requirement_met": true,
+        "new_safety_limit_met": true
+      },
+      "camera-latency": {
+        "net_rescue_requirement_met": true,
+        "new_safety_limit_met": true
+      },
+      "camera-combined": {
+        "net_rescue_requirement_met": false,
+        "new_safety_limit_met": true
+      }
+    }
+  }
+}

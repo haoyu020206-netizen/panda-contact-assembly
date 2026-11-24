@@ -314,6 +314,11 @@ search-off baseline of 14/20. It rescued zero baseline failures. The optional tr
 case-by-case timing and force results are in the
 [stall-trigger development report](docs/results/stall-trigger-development/README.md).
 
+The [held-out evaluation](docs/results/stall-trigger-holdout/README.md) used 60 distinct
+new disturbances and three archived checkpoints. The candidate triggered in 18 of 180
+paired cases and changed none of the success or safety outcomes. It missed the required
+net rescue in the combined condition, so the benchmark selects search off.
+
 ## 已实现
 
 - 自带无网格依赖的 7-DoF Panda 风格 MJCF，可立即验证控制代码；
@@ -503,7 +508,7 @@ tests/                            # 配置、数学、轨迹与模型测试
 
 ## 后续升级顺序
 
-1. 用未参与开发的新扰动复验停滞触发器，比较配对救回、额外失败和超力终止；
+1. 复盘搜索已经启动却仍未完成插入的回合，区分卸载、找入口和重插三个阶段的失效；
 2. 用渲染的标记点/相机图像替代 simulator-derived measurement source，并标定相机外参；
 3. 加入 Menagerie 域随机化和少量目标域微调，并和零样本迁移做严格消融；
 4. 扩大训练种子后报告置信区间，并把感知误差和控制失效做分层分析；

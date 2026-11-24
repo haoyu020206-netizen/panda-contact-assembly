@@ -35,8 +35,8 @@ relative to search off.
 On this development set, the gate prevented interruptions that the immediate trigger
 caused. Search off and the stall trigger produced the same episode success outcomes.
 These cases were selected from a single existing checkpoint and condition. The candidate
-is available through the optional `stall_trigger` argument and awaits evaluation on
-separate disturbances before any default change.
+is available through the optional `stall_trigger` argument. The subsequent
+[held-out evaluation](../stall-trigger-holdout/README.md) selected search off.
 
 [Per-episode results](stall-trigger-development.json) ·
 [Cloud run and 60 control-rate traces](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/45490241913).
