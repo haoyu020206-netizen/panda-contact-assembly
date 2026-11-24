@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      MUJOCO_GL: osmesa
       OMP_NUM_THREADS: "1"
       MKL_NUM_THREADS: "1"
+      PYTHONFAULTHANDLER: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -42,12 +42,16 @@ jobs:
           path: reference
           run-id: 45476321699
           github-token: ${{ github.token }}
-      - name: Replay, verify, and render paired insertion
+      - name: Replay and verify both policies
         run: >-
-          python scripts/render_paired_recovery_demo.py
+          python scripts/render_paired_recovery_demo.py record
           --model checkpoint/source-training/residual_sac.zip
           --reference reference/20261119/camera-combined
           --output paired-recovery-demo
+      - name: Render paired insertion
+        env:
+          MUJOCO_GL: osmesa
+        run: python scripts/render_paired_recovery_demo.py render --output paired-recovery-demo
       - name: Inspect encoded video
         run: >-
           ffprobe -v error -show_entries

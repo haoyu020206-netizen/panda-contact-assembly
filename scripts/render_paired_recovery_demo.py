@@ -17,7 +17,6 @@ import mujoco
 import numpy as np
 from evaluate_pose_estimator_transfer import CONDITIONS, MAX_RECOVERY_POSE_AGE_S
 from PIL import Image, ImageDraw, ImageFont
-from stable_baselines3 import SAC
 
 from panda_assembly.config import load_config
 from panda_assembly.contact_search import SpiralResidualPolicy
@@ -39,6 +38,7 @@ MUTED = "#afbcc9"
 COLORS = ("#70dfc1", "#ffbb76")
 FORCE_TRIGGER_N = 5.0
 DEPTH_TARGET_MM = 50.0
+POLICIES = ("learned", "search-compensated")
 
 
 @dataclass
@@ -306,15 +306,7 @@ def render(env: ResidualPegInsertionEnv, traces: tuple[Replay, Replay], out: Pat
         renderer.close()
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", type=Path, required=True)
-    parser.add_argument("--reference", type=Path, required=True, help="camera-combined directory")
-    parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-    if hashlib.sha256(args.model.read_bytes()).hexdigest() != CHECKPOINT_SHA256:
-        raise ValueError("checkpoint does not match the archived 20261119 SAC model")
-    args.output.mkdir(parents=True, exist_ok=True)
+def replay_environment() -> ResidualPegInsertionEnv:
     config = load_config(Path("configs/menagerie.toml"))
     config = replace(
         config,
@@ -322,6 +314,18 @@ def main() -> None:
         residual_rl=replace(config.residual_rl, episode_duration_s=18.0),
     )
     estimator = next(config for key, _, config in CONDITIONS if key == "camera-combined")
+    return ResidualPegInsertionEnv(
+        config, pose_estimator_config=estimator, socket_clearance_m=0.003
+    )
+
+
+def record_replays(env: ResidualPegInsertionEnv, args: argparse.Namespace) -> None:
+    from stable_baselines3 import SAC
+
+    if hashlib.sha256(args.model.read_bytes()).hexdigest() != CHECKPOINT_SHA256:
+        raise ValueError("checkpoint does not match the archived 20261119 SAC model")
+    args.output.mkdir(parents=True, exist_ok=True)
+    config = env.config
     model = SAC.load(args.model, device="cpu")
 
     def learned(obs):
@@ -339,32 +343,70 @@ def main() -> None:
         entry_mode="compensated",
         max_pose_age_s=MAX_RECOVERY_POSE_AGE_S,
     )
-    env = ResidualPegInsertionEnv(config, pose_estimator_config=estimator, socket_clearance_m=0.003)
+    traces = (record(env, learned, None), record(env, learned, search))
+    for policy, trace in zip(POLICIES, traces, strict=True):
+        verify(trace, args.reference / policy / "episodes.csv")
+        with (args.output / f"{policy}-timeseries.csv").open(
+            "w", newline="", encoding="utf-8"
+        ) as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(trace.rows[0]))
+            writer.writeheader()
+            writer.writerows(trace.rows)
+    np.savez_compressed(
+        args.output / "joint-states.npz",
+        **dict(zip(POLICIES, [trace.qpos for trace in traces], strict=True)),
+    )
+    result = {
+        "condition": "camera-combined",
+        "checkpoint_seed": SEED,
+        "checkpoint_sha256": CHECKPOINT_SHA256,
+        "episode": EPISODE,
+        "reset_seed": SEED + EPISODE,
+        "benchmark_run": 45476321699,
+        "search_off": traces[0].summary,
+        "compensated_search": traces[1].summary,
+    }
+    (args.output / "replay-summary.json").write_text(
+        json.dumps(result, indent=2) + "\n", encoding="utf-8"
+    )
+    print(json.dumps(result, indent=2), flush=True)
+
+
+def load_replay(directory: Path, policy: str, summary: dict) -> Replay:
+    with (directory / f"{policy}-timeseries.csv").open(newline="", encoding="utf-8") as handle:
+        rows = [
+            {
+                key: val == "True" if key == "search_triggered" else float(val)
+                for key, val in row.items()
+            }
+            for row in csv.DictReader(handle)
+        ]
+    with np.load(directory / "joint-states.npz", allow_pickle=False) as states:
+        return Replay(rows, states[policy], summary)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    record_parser = commands.add_parser("record")
+    record_parser.add_argument("--model", type=Path, required=True)
+    record_parser.add_argument("--reference", type=Path, required=True)
+    record_parser.add_argument("--output", type=Path, required=True)
+    render_parser = commands.add_parser("render")
+    render_parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    env = replay_environment()
     try:
-        traces = (record(env, learned, None), record(env, learned, search))
-        for policy, trace in zip(("learned", "search-compensated"), traces, strict=True):
-            verify(trace, args.reference / policy / "episodes.csv")
-            with (args.output / f"{policy}-timeseries.csv").open(
-                "w", newline="", encoding="utf-8"
-            ) as handle:
-                writer = csv.DictWriter(handle, fieldnames=list(trace.rows[0]))
-                writer.writeheader()
-                writer.writerows(trace.rows)
-        result = {
-            "condition": "camera-combined",
-            "checkpoint_seed": SEED,
-            "checkpoint_sha256": CHECKPOINT_SHA256,
-            "episode": EPISODE,
-            "reset_seed": SEED + EPISODE,
-            "benchmark_run": 45476321699,
-            "search_off": traces[0].summary,
-            "compensated_search": traces[1].summary,
-        }
-        (args.output / "replay-summary.json").write_text(
-            json.dumps(result, indent=2) + "\n", encoding="utf-8"
-        )
-        print(json.dumps(result, indent=2), flush=True)
-        render(env, traces, args.output)
+        if args.command == "record":
+            record_replays(env, args)
+        else:
+            result = json.loads((args.output / "replay-summary.json").read_text(encoding="utf-8"))
+            traces = (
+                load_replay(args.output, POLICIES[0], result["search_off"]),
+                load_replay(args.output, POLICIES[1], result["compensated_search"]),
+            )
+            env.reset(seed=SEED + EPISODE)
+            render(env, traces, args.output)
     finally:
         env.close()
 
