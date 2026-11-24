@@ -211,7 +211,7 @@ def render(env: ResidualPegInsertionEnv, traces: tuple[Replay, Replay], out: Pat
                 value = (
                     f"SUCCESS at {trace.summary['completion_time_s']:.2f} s"
                     if trace.summary["success"]
-                    else "TIMEOUT · final depth %.1f mm" % trace.summary["final_depth_mm"]
+                    else f"TIMEOUT · final depth {trace.summary['final_depth_mm']:.1f} mm"
                 )
             else:
                 state = "SEARCH TRIGGERED" if row["search_triggered"] else "TRACKING"
