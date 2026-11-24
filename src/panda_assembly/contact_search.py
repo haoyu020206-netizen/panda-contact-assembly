@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Callable
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
 
+from panda_assembly.pose_estimation import PoseEstimate
+
 FloatArray = NDArray[np.float64]
 Policy = Callable[[NDArray[np.float32]], NDArray[np.float32]]
+EntryMode = Literal["legacy", "depth", "compensated"]
 
 
 class SpiralResidualPolicy:
@@ -29,6 +34,8 @@ class SpiralResidualPolicy:
         search_radius_m: float = 0.004,
         search_cycles: float = 3.0,
         entry_depth_m: float = 0.003,
+        entry_mode: EntryMode = "legacy",
+        max_pose_age_s: float = 0.16,
     ) -> None:
         self.base_policy = base_policy
         self.max_position_offset_m = np.asarray(max_position_offset_m, dtype=float)
@@ -43,6 +50,7 @@ class SpiralResidualPolicy:
             search_radius_m,
             search_cycles,
             entry_depth_m,
+            max_pose_age_s,
         )
         if not all(np.isfinite(value) and value > 0.0 for value in positive_values):
             raise ValueError("spiral recovery parameters must be positive and finite")
@@ -56,6 +64,10 @@ class SpiralResidualPolicy:
         self.search_radius_m = float(search_radius_m)
         self.search_cycles = float(search_cycles)
         self.entry_depth_m = float(entry_depth_m)
+        if entry_mode not in ("legacy", "depth", "compensated"):
+            raise ValueError(f"unknown entry mode: {entry_mode}")
+        self.entry_mode = entry_mode
+        self.max_pose_age_s = max_pose_age_s
         self.reset_episode()
 
     def reset_episode(self) -> None:
@@ -64,6 +76,7 @@ class SpiralResidualPolicy:
         self._trigger_time_s = 0.0
         self._center_action = np.zeros(3, dtype=np.float32)
         self._last_action = np.zeros(3, dtype=np.float32)
+        self._tip_z_history: deque[tuple[float, float]] = deque()
 
     def episode_metrics(self) -> dict[str, bool]:
         return {
@@ -72,6 +85,40 @@ class SpiralResidualPolicy:
         }
 
     def __call__(self, observation: NDArray[np.float32]) -> NDArray[np.float32]:
+        if self.entry_mode == "compensated":
+            raise ValueError("compensated recovery requires timestamped pose and tip height")
+        return self._action(observation)
+
+    def act_with_pose(
+        self,
+        observation: NDArray[np.float32],
+        pose: PoseEstimate,
+        *,
+        time_s: float,
+        tip_z_m: float,
+    ) -> NDArray[np.float32]:
+        if self.entry_mode != "compensated":
+            return self(observation)
+        self._tip_z_history.append((time_s, tip_z_m))
+        tolerance_s = 1e-9
+        oldest_s = time_s - self.max_pose_age_s - tolerance_s
+        while self._tip_z_history[0][0] < oldest_s:
+            self._tip_z_history.popleft()
+        depth_m = None
+        if pose.age_s <= self.max_pose_age_s + tolerance_s:
+            for sample_time_s, sample_z_m in self._tip_z_history:
+                if abs(sample_time_s - pose.measurement_time_s) <= tolerance_s:
+                    # The fixture is stationary. Only the robot tip moved since capture.
+                    depth_m = float(pose.relative_position_m[2]) + sample_z_m - tip_z_m
+                    break
+        return self._action(observation, compensated_depth_m=depth_m)
+
+    def _action(
+        self,
+        observation: NDArray[np.float32],
+        *,
+        compensated_depth_m: float | None = None,
+    ) -> NDArray[np.float32]:
         observation = np.asarray(observation, dtype=np.float32)
         if observation.shape != (12,):
             raise ValueError(f"residual observation must have shape (12,), got {observation.shape}")
@@ -81,9 +128,12 @@ class SpiralResidualPolicy:
         base_action = np.clip(base_action, -1.0, 1.0)
         time_s = float(np.clip(observation[8], 0.0, 1.5) * self.episode_duration_s)
         force_n = max(0.0, float(observation[6]) * self.force_scale_n)
-        relative_z_m = float(observation[2]) * 0.080
+        raw_depth_m = float(observation[2]) * 0.080
+        depth_m = compensated_depth_m if self.entry_mode == "compensated" else raw_depth_m
+        legacy = self.entry_mode == "legacy"
+        can_trigger = legacy or (depth_m is not None and depth_m < self.entry_depth_m)
 
-        if not self._search_triggered and force_n >= self.trigger_force_n:
+        if not self._search_triggered and can_trigger and force_n >= self.trigger_force_n:
             self._search_triggered = True
             self._trigger_time_s = time_s
             self._center_action = base_action.copy()
@@ -91,12 +141,20 @@ class SpiralResidualPolicy:
 
         if not self._search_triggered:
             return base_action
-        if not self._entry_detected and relative_z_m <= -self.entry_depth_m:
+        elapsed_s = max(0.0, time_s - self._trigger_time_s)
+        if legacy:
+            entered = raw_depth_m <= -self.entry_depth_m
+        else:
+            entered = (
+                elapsed_s >= self.retract_duration_s
+                and depth_m is not None
+                and depth_m >= self.entry_depth_m
+            )
+        if entered:
             self._entry_detected = True
         if self._entry_detected:
             return self._last_action.copy()
 
-        elapsed_s = max(0.0, time_s - self._trigger_time_s)
         action = self._center_action.copy()
         if elapsed_s < self.retract_duration_s:
             action[2] = 1.0

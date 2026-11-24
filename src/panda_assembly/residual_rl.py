@@ -359,6 +359,7 @@ class ResidualPegInsertionEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]])
             self.np_random,
         )
         self.last_pose_estimate = pose_estimate
+        self.last_observed_tip_z_m = float(tip_position[2])
         self.pose_estimate_age_sum_s += pose_estimate.age_s
         self.pose_estimate_observations += 1
         self.max_pose_estimate_age_s = max(self.max_pose_estimate_age_s, pose_estimate.age_s)
@@ -572,6 +573,7 @@ def evaluate_residual_policy(
     )
     base_seed = config.residual_rl.seed if seed is None else seed
     results: list[ResidualEpisodeResult] = []
+    act_with_pose = getattr(policy, "act_with_pose", None)
     try:
         for episode in range(episodes):
             reset_episode = getattr(policy, "reset_episode", None)
@@ -583,7 +585,18 @@ def evaluate_residual_policy(
             terminated = False
             truncated = False
             while not (terminated or truncated):
-                action = np.asarray(policy(observation), dtype=np.float32)
+                if callable(act_with_pose):
+                    pose = env.last_pose_estimate
+                    assert pose is not None
+                    command = act_with_pose(
+                        observation,
+                        pose,
+                        time_s=float(env.data.time),
+                        tip_z_m=env.last_observed_tip_z_m,
+                    )
+                else:
+                    command = policy(observation)
+                action = np.asarray(command, dtype=np.float32)
                 observation, reward, terminated, truncated, info = env.step(action)
                 total_reward += reward
                 steps += 1

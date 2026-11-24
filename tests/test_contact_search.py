@@ -3,7 +3,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from panda_assembly.contact_search import SpiralResidualPolicy
+from panda_assembly.contact_search import EntryMode, SpiralResidualPolicy
+from panda_assembly.pose_estimation import PoseEstimate
 
 
 def zero_policy(observation: np.ndarray) -> np.ndarray:
@@ -19,12 +20,13 @@ def observation(*, time_s: float, force_n: float = 0.0, relative_z_m: float = 0.
     return value
 
 
-def make_policy() -> SpiralResidualPolicy:
+def make_policy(entry_mode: EntryMode = "legacy") -> SpiralResidualPolicy:
     return SpiralResidualPolicy(
         zero_policy,
         max_position_offset_m=np.array([0.008, 0.008, 0.003]),
         episode_duration_s=10.0,
         force_scale_n=200.0,
+        entry_mode=entry_mode,
     )
 
 
@@ -55,3 +57,40 @@ def test_spiral_policy_rejects_radius_beyond_action_limit() -> None:
             force_scale_n=200.0,
             search_radius_m=0.004,
         )
+
+
+def test_recovery_uses_positive_depth_after_retraction() -> None:
+    policy = make_policy("depth")
+    assert policy(observation(time_s=0.0, force_n=10.0, relative_z_m=0.005))[2] == 0.0
+    assert policy(observation(time_s=1.0, force_n=10.0, relative_z_m=-0.005))[2] == 1.0
+    policy(observation(time_s=1.25, relative_z_m=0.005))
+    assert not policy.episode_metrics()["entry_detected"]
+    policy(observation(time_s=1.6, relative_z_m=-0.005))
+    assert not policy.episode_metrics()["entry_detected"]
+    policy(observation(time_s=1.7, relative_z_m=0.005))
+    assert policy.episode_metrics()["entry_detected"]
+
+
+def test_compensated_recovery_rejects_old_frames_and_accounts_for_tip_motion() -> None:
+    policy = make_policy("compensated")
+
+    def step(time_s, tip_z_m, capture_s, depth_m, force_n=0.0):
+        pose = PoseEstimate(
+            np.array([0.0, 0.0, depth_m]), capture_s, time_s - capture_s, True, 1, 0, 1
+        )
+        return policy.act_with_pose(
+            observation(time_s=time_s, force_n=force_n, relative_z_m=depth_m),
+            pose,
+            time_s=time_s,
+            tip_z_m=tip_z_m,
+        )
+
+    assert step(0.2, 0.01, 0.0, -0.01, 10.0)[2] == 0.0
+    assert step(1.0, 0.01, 1.0, -0.01, 10.0)[2] == 1.0
+    step(1.6, 0.001, 1.4, 0.005)
+    assert not policy.episode_metrics()["entry_detected"]
+    step(1.64, 0.001, 1.64, -0.001)
+    step(1.76, -0.005, 1.64, -0.001)
+    assert policy.episode_metrics()["entry_detected"]
+    policy.reset_episode()
+    assert step(1.76, -0.005, 1.64, -0.001, 10.0)[2] == 0.0
