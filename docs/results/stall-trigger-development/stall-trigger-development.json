@@ -1,0 +1,1545 @@
+{
+  "evaluation": "historical development cases",
+  "reference_run": 45476321699,
+  "checkpoint_seed": 20261119,
+  "model_sha256": "c82dfc9cef31b52fb8219e57cb87df156653f2db5a2f5558e2889f7f3efacccd",
+  "condition": "camera-combined",
+  "case_count": 20,
+  "candidate": {
+    "contact_duration_s": 0.6,
+    "minimum_progress_m": 0.001,
+    "retry_margin_s": 0.5,
+    "force_threshold_n": 5.0,
+    "maximum_pose_age_s": 0.16,
+    "minimum_remaining_s": 5.0
+  },
+  "policies": {
+    "learned": {
+      "successes": 14,
+      "triggers": 0,
+      "safety_terminations": 1,
+      "mean_episode_peak_force_n": 63.65165675059252,
+      "maximum_episode_peak_force_n": 290.54576845390727,
+      "rescued_vs_search_off": 0,
+      "harmed_vs_search_off": 0,
+      "new_safety_terminations_vs_search_off": 0
+    },
+    "search-compensated": {
+      "successes": 8,
+      "triggers": 11,
+      "safety_terminations": 1,
+      "mean_episode_peak_force_n": 62.010792568037466,
+      "maximum_episode_peak_force_n": 290.54576845390727,
+      "rescued_vs_search_off": 0,
+      "harmed_vs_search_off": 6,
+      "new_safety_terminations_vs_search_off": 0
+    },
+    "search-stall": {
+      "successes": 14,
+      "triggers": 5,
+      "safety_terminations": 1,
+      "mean_episode_peak_force_n": 63.65165675059252,
+      "maximum_episode_peak_force_n": 290.54576845390727,
+      "rescued_vs_search_off": 0,
+      "harmed_vs_search_off": 0,
+      "new_safety_terminations_vs_search_off": 0
+    }
+  },
+  "episodes": [
+    {
+      "episode": 0,
+      "reset_seed": 20261119,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        }
+      },
+      "group": "other",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.758000000000596,
+          "peak_force_n": 41.717215494369356,
+          "final_depth_mm": 50.02625300299596,
+          "trigger_time_s": null,
+          "end_time_s": 11.758000000000596,
+          "disturbance": {
+            "lateral_offset_x": -0.005721465317233742,
+            "lateral_offset_y": -0.0029300091828060766,
+            "friction_scale": 1.0562864959805538,
+            "tool_mass_scale": 0.8962286917752034
+          }
+        },
+        "search-compensated": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.758000000000596,
+          "peak_force_n": 41.717215494369356,
+          "final_depth_mm": 50.02625300299596,
+          "trigger_time_s": null,
+          "end_time_s": 11.758000000000596,
+          "disturbance": {
+            "lateral_offset_x": -0.005721465317233742,
+            "lateral_offset_y": -0.0029300091828060766,
+            "friction_scale": 1.0562864959805538,
+            "tool_mass_scale": 0.8962286917752034
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.758000000000596,
+          "peak_force_n": 41.717215494369356,
+          "final_depth_mm": 50.02625300299596,
+          "trigger_time_s": null,
+          "end_time_s": 11.758000000000596,
+          "disturbance": {
+            "lateral_offset_x": -0.005721465317233742,
+            "lateral_offset_y": -0.0029300091828060766,
+            "friction_scale": 1.0562864959805538,
+            "tool_mass_scale": 0.8962286917752034
+          }
+        }
+      },
+      "old_trigger": null,
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 588,
+        "collecting_contact_window": 1
+      }
+    },
+    {
+      "episode": 1,
+      "reset_seed": 20261120,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": -6.938893903907228e-18,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": -6.938893903907228e-18,
+          "completion_time_s": 0.0
+        }
+      },
+      "group": "other",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.744000000000591,
+          "peak_force_n": 24.347519304704235,
+          "final_depth_mm": 53.388800732348415,
+          "trigger_time_s": null,
+          "end_time_s": 11.744000000000591,
+          "disturbance": {
+            "lateral_offset_x": 0.0033184890147403166,
+            "lateral_offset_y": -0.004902306467649811,
+            "friction_scale": 1.2667431072172177,
+            "tool_mass_scale": 1.0360376697106444
+          }
+        },
+        "search-compensated": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.744000000000591,
+          "peak_force_n": 24.347519304704235,
+          "final_depth_mm": 53.388800732348415,
+          "trigger_time_s": null,
+          "end_time_s": 11.744000000000591,
+          "disturbance": {
+            "lateral_offset_x": 0.0033184890147403166,
+            "lateral_offset_y": -0.004902306467649811,
+            "friction_scale": 1.2667431072172177,
+            "tool_mass_scale": 1.0360376697106444
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.744000000000591,
+          "peak_force_n": 24.347519304704235,
+          "final_depth_mm": 53.388800732348415,
+          "trigger_time_s": null,
+          "end_time_s": 11.744000000000591,
+          "disturbance": {
+            "lateral_offset_x": 0.0033184890147403166,
+            "lateral_offset_y": -0.004902306467649811,
+            "friction_scale": 1.2667431072172177,
+            "tool_mass_scale": 1.0360376697106444
+          }
+        }
+      },
+      "old_trigger": null,
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 588,
+        "collecting_contact_window": 1
+      }
+    },
+    {
+      "episode": 2,
+      "reset_seed": 20261121,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 6.938893903907228e-18,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 6.938893903907228e-18,
+          "completion_time_s": 0.0
+        }
+      },
+      "group": "other",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 12.314000000000782,
+          "peak_force_n": 22.315249853210467,
+          "final_depth_mm": 50.01005365726519,
+          "trigger_time_s": null,
+          "end_time_s": 12.314000000000782,
+          "disturbance": {
+            "lateral_offset_x": 0.00191895930169336,
+            "lateral_offset_y": 0.006522214762719439,
+            "friction_scale": 1.2220581289352515,
+            "tool_mass_scale": 1.18479293416297
+          }
+        },
+        "search-compensated": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 12.314000000000782,
+          "peak_force_n": 22.315249853210467,
+          "final_depth_mm": 50.01005365726519,
+          "trigger_time_s": null,
+          "end_time_s": 12.314000000000782,
+          "disturbance": {
+            "lateral_offset_x": 0.00191895930169336,
+            "lateral_offset_y": 0.006522214762719439,
+            "friction_scale": 1.2220581289352515,
+            "tool_mass_scale": 1.18479293416297
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 12.314000000000782,
+          "peak_force_n": 22.315249853210467,
+          "final_depth_mm": 50.01005365726519,
+          "trigger_time_s": null,
+          "end_time_s": 12.314000000000782,
+          "disturbance": {
+            "lateral_offset_x": 0.00191895930169336,
+            "lateral_offset_y": 0.006522214762719439,
+            "friction_scale": 1.2220581289352515,
+            "tool_mass_scale": 1.18479293416297
+          }
+        }
+      },
+      "old_trigger": null,
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 610,
+        "collecting_contact_window": 7
+      }
+    },
+    {
+      "episode": 3,
+      "reset_seed": 20261122,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 6.938893903907228e-18,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 6.938893903907228e-18,
+          "completion_time_s": 0.0
+        }
+      },
+      "group": "other",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.71000000000058,
+          "peak_force_n": 37.70465617974153,
+          "final_depth_mm": 50.06277681223237,
+          "trigger_time_s": null,
+          "end_time_s": 11.71000000000058,
+          "disturbance": {
+            "lateral_offset_x": -0.00694174545142155,
+            "lateral_offset_y": 0.0016128430041637267,
+            "friction_scale": 1.387195032430035,
+            "tool_mass_scale": 1.015107625871779
+          }
+        },
+        "search-compensated": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.71000000000058,
+          "peak_force_n": 37.70465617974153,
+          "final_depth_mm": 50.06277681223237,
+          "trigger_time_s": null,
+          "end_time_s": 11.71000000000058,
+          "disturbance": {
+            "lateral_offset_x": -0.00694174545142155,
+            "lateral_offset_y": 0.0016128430041637267,
+            "friction_scale": 1.387195032430035,
+            "tool_mass_scale": 1.015107625871779
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.71000000000058,
+          "peak_force_n": 37.70465617974153,
+          "final_depth_mm": 50.06277681223237,
+          "trigger_time_s": null,
+          "end_time_s": 11.71000000000058,
+          "disturbance": {
+            "lateral_offset_x": -0.00694174545142155,
+            "lateral_offset_y": 0.0016128430041637267,
+            "friction_scale": 1.387195032430035,
+            "tool_mass_scale": 1.015107625871779
+          }
+        }
+      },
+      "old_trigger": null,
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 587
+      }
+    },
+    {
+      "episode": 4,
+      "reset_seed": 20261123,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "both_failed",
+      "outcomes": {
+        "learned": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 74.33334590780532,
+          "final_depth_mm": 0.03551656249511925,
+          "trigger_time_s": null,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.006382584933452474,
+            "lateral_offset_y": -0.0036857650233529616,
+            "friction_scale": 0.6527209626305445,
+            "tool_mass_scale": 0.9731625474543647
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 74.33334590780532,
+          "final_depth_mm": 0.0014348575103073635,
+          "trigger_time_s": 10.580000000000203,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.006382584933452474,
+            "lateral_offset_y": -0.0036857650233529616,
+            "friction_scale": 0.6527209626305445,
+            "tool_mass_scale": 0.9731625474543647
+          }
+        },
+        "search-stall": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 74.33334590780532,
+          "final_depth_mm": 0.035954953493400055,
+          "trigger_time_s": 11.340000000000456,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.006382584933452474,
+            "lateral_offset_y": -0.0036857650233529616,
+            "friction_scale": 0.6527209626305445,
+            "tool_mass_scale": 0.9731625474543647
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.580000000000203,
+        "force_n": 52.06178094977203,
+        "depth_mm": 0.306725876829006,
+        "pose_age_ms": 140.00000000004675,
+        "remaining_s": 7.419999999999797,
+        "search_off_progress_next_window_mm": 0.17553455134233786
+      },
+      "stall_trigger": {
+        "time_s": 11.340000000000456,
+        "force_n": 9.899424399260493,
+        "depth_mm": 0.022887122923753722,
+        "pose_age_ms": 140.00000000004675,
+        "remaining_s": 6.659999999999544,
+        "search_off_progress_next_window_mm": 0.026401893880478866
+      },
+      "stall_decisions": {
+        "contact_or_depth_gate": 534,
+        "collecting_contact_window": 33,
+        "stall_triggered": 334
+      }
+    },
+    {
+      "episode": 5,
+      "reset_seed": 20261124,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "both_failed",
+      "outcomes": {
+        "learned": {
+          "success": false,
+          "safety_violation": true,
+          "completion_time_s": null,
+          "peak_force_n": 290.54576845390727,
+          "final_depth_mm": 0.3014500209976845,
+          "trigger_time_s": null,
+          "end_time_s": 10.554000000000194,
+          "disturbance": {
+            "lateral_offset_x": 0.006450073371883329,
+            "lateral_offset_y": 0.0064828547826013124,
+            "friction_scale": 0.7006326171636295,
+            "tool_mass_scale": 0.9376380462793745
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": true,
+          "completion_time_s": null,
+          "peak_force_n": 290.54576845390727,
+          "final_depth_mm": 0.3014500209976845,
+          "trigger_time_s": null,
+          "end_time_s": 10.554000000000194,
+          "disturbance": {
+            "lateral_offset_x": 0.006450073371883329,
+            "lateral_offset_y": 0.0064828547826013124,
+            "friction_scale": 0.7006326171636295,
+            "tool_mass_scale": 0.9376380462793745
+          }
+        },
+        "search-stall": {
+          "success": false,
+          "safety_violation": true,
+          "completion_time_s": null,
+          "peak_force_n": 290.54576845390727,
+          "final_depth_mm": 0.3014500209976845,
+          "trigger_time_s": null,
+          "end_time_s": 10.554000000000194,
+          "disturbance": {
+            "lateral_offset_x": 0.006450073371883329,
+            "lateral_offset_y": 0.0064828547826013124,
+            "friction_scale": 0.7006326171636295,
+            "tool_mass_scale": 0.9376380462793745
+          }
+        }
+      },
+      "old_trigger": null,
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 529
+      }
+    },
+    {
+      "episode": 6,
+      "reset_seed": 20261125,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "search_harmed_baseline_success",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 12.268000000000766,
+          "peak_force_n": 68.28776847595685,
+          "final_depth_mm": 53.817966610083865,
+          "trigger_time_s": null,
+          "end_time_s": 12.268000000000766,
+          "disturbance": {
+            "lateral_offset_x": -0.0020297594382486794,
+            "lateral_offset_y": -0.006479450747880572,
+            "friction_scale": 0.8475917584947763,
+            "tool_mass_scale": 1.0742690893137632
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 29.469641744608545,
+          "final_depth_mm": 49.76470165669461,
+          "trigger_time_s": 10.560000000000196,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.0020297594382486794,
+            "lateral_offset_y": -0.006479450747880572,
+            "friction_scale": 0.8475917584947763,
+            "tool_mass_scale": 1.0742690893137632
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 12.268000000000766,
+          "peak_force_n": 68.28776847595685,
+          "final_depth_mm": 53.817966610083865,
+          "trigger_time_s": null,
+          "end_time_s": 12.268000000000766,
+          "disturbance": {
+            "lateral_offset_x": -0.0020297594382486794,
+            "lateral_offset_y": -0.006479450747880572,
+            "friction_scale": 0.8475917584947763,
+            "tool_mass_scale": 1.0742690893137632
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.560000000000196,
+        "force_n": 22.646030271196672,
+        "depth_mm": 0.40439366581668246,
+        "pose_age_ms": 120.00000000004007,
+        "remaining_s": 7.439999999999804,
+        "search_off_progress_next_window_mm": 29.20905504353727
+      },
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 608,
+        "collecting_contact_window": 7
+      }
+    },
+    {
+      "episode": 7,
+      "reset_seed": 20261126,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "both_failed",
+      "outcomes": {
+        "learned": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 65.83049562598792,
+          "final_depth_mm": 0.03794196242101755,
+          "trigger_time_s": null,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": 0.005573174230057993,
+            "lateral_offset_y": -0.006676069441018236,
+            "friction_scale": 0.9725439161987325,
+            "tool_mass_scale": 0.9273046358702763
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 65.83049562598792,
+          "final_depth_mm": 0.053470916508868704,
+          "trigger_time_s": 10.560000000000196,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": 0.005573174230057993,
+            "lateral_offset_y": -0.006676069441018236,
+            "friction_scale": 0.9725439161987325,
+            "tool_mass_scale": 0.9273046358702763
+          }
+        },
+        "search-stall": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 65.83049562598792,
+          "final_depth_mm": 0.013071301965372761,
+          "trigger_time_s": 11.44000000000049,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": 0.005573174230057993,
+            "lateral_offset_y": -0.006676069441018236,
+            "friction_scale": 0.9725439161987325,
+            "tool_mass_scale": 0.9273046358702763
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.560000000000196,
+        "force_n": 34.3562624415744,
+        "depth_mm": 0.26858823931591447,
+        "pose_age_ms": 120.00000000004007,
+        "remaining_s": 7.439999999999804,
+        "search_off_progress_next_window_mm": 0.042411819565990605
+      },
+      "stall_trigger": {
+        "time_s": 11.44000000000049,
+        "force_n": 7.8000713814309925,
+        "depth_mm": 0.02658402223687517,
+        "pose_age_ms": 120.00000000004007,
+        "remaining_s": 6.55999999999951,
+        "search_off_progress_next_window_mm": 0.009017341963568626
+      },
+      "stall_decisions": {
+        "contact_or_depth_gate": 537,
+        "collecting_contact_window": 35,
+        "stall_triggered": 329
+      }
+    },
+    {
+      "episode": 8,
+      "reset_seed": 20261127,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "search_harmed_baseline_success",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.89200000000064,
+          "peak_force_n": 57.99018612097183,
+          "final_depth_mm": 57.77035590144652,
+          "trigger_time_s": null,
+          "end_time_s": 11.89200000000064,
+          "disturbance": {
+            "lateral_offset_x": -0.001831852587150012,
+            "lateral_offset_y": -0.004758387243263159,
+            "friction_scale": 0.9885746582964061,
+            "tool_mass_scale": 0.9285249734143484
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 57.99018612097183,
+          "final_depth_mm": 0.05752003024550589,
+          "trigger_time_s": 10.560000000000196,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.001831852587150012,
+            "lateral_offset_y": -0.004758387243263159,
+            "friction_scale": 0.9885746582964061,
+            "tool_mass_scale": 0.9285249734143484
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.89200000000064,
+          "peak_force_n": 57.99018612097183,
+          "final_depth_mm": 57.77035590144652,
+          "trigger_time_s": null,
+          "end_time_s": 11.89200000000064,
+          "disturbance": {
+            "lateral_offset_x": -0.001831852587150012,
+            "lateral_offset_y": -0.004758387243263159,
+            "friction_scale": 0.9885746582964061,
+            "tool_mass_scale": 0.9285249734143484
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.560000000000196,
+        "force_n": 16.769395603460502,
+        "depth_mm": 0.3641934474002406,
+        "pose_age_ms": 120.00000000004007,
+        "remaining_s": 7.439999999999804,
+        "search_off_progress_next_window_mm": 6.060628759105069
+      },
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 588,
+        "collecting_contact_window": 8
+      }
+    },
+    {
+      "episode": 9,
+      "reset_seed": 20261128,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        }
+      },
+      "group": "other",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.82800000000062,
+          "peak_force_n": 20.21775057013578,
+          "final_depth_mm": 54.91578261490787,
+          "trigger_time_s": null,
+          "end_time_s": 11.82800000000062,
+          "disturbance": {
+            "lateral_offset_x": 0.00570279206717005,
+            "lateral_offset_y": 0.0024642683933353447,
+            "friction_scale": 1.136387628311808,
+            "tool_mass_scale": 0.9663156921003017
+          }
+        },
+        "search-compensated": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.82800000000062,
+          "peak_force_n": 20.21775057013578,
+          "final_depth_mm": 54.91578261490787,
+          "trigger_time_s": null,
+          "end_time_s": 11.82800000000062,
+          "disturbance": {
+            "lateral_offset_x": 0.00570279206717005,
+            "lateral_offset_y": 0.0024642683933353447,
+            "friction_scale": 1.136387628311808,
+            "tool_mass_scale": 0.9663156921003017
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.82800000000062,
+          "peak_force_n": 20.21775057013578,
+          "final_depth_mm": 54.91578261490787,
+          "trigger_time_s": null,
+          "end_time_s": 11.82800000000062,
+          "disturbance": {
+            "lateral_offset_x": 0.00570279206717005,
+            "lateral_offset_y": 0.0024642683933353447,
+            "friction_scale": 1.136387628311808,
+            "tool_mass_scale": 0.9663156921003017
+          }
+        }
+      },
+      "old_trigger": null,
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 593
+      }
+    },
+    {
+      "episode": 10,
+      "reset_seed": 20261129,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "search_harmed_baseline_success",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 12.206000000000746,
+          "peak_force_n": 72.02570850829377,
+          "final_depth_mm": 53.57938336933654,
+          "trigger_time_s": null,
+          "end_time_s": 12.206000000000746,
+          "disturbance": {
+            "lateral_offset_x": -0.003909081413531135,
+            "lateral_offset_y": -0.004760976139893715,
+            "friction_scale": 0.8183090871956601,
+            "tool_mass_scale": 1.14072491742927
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 78.02655158854093,
+          "final_depth_mm": 49.748151293973365,
+          "trigger_time_s": 10.580000000000203,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.003909081413531135,
+            "lateral_offset_y": -0.004760976139893715,
+            "friction_scale": 0.8183090871956601,
+            "tool_mass_scale": 1.14072491742927
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 12.206000000000746,
+          "peak_force_n": 72.02570850829377,
+          "final_depth_mm": 53.57938336933654,
+          "trigger_time_s": null,
+          "end_time_s": 12.206000000000746,
+          "disturbance": {
+            "lateral_offset_x": -0.003909081413531135,
+            "lateral_offset_y": -0.004760976139893715,
+            "friction_scale": 0.8183090871956601,
+            "tool_mass_scale": 1.14072491742927
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.580000000000203,
+        "force_n": 27.375560132265758,
+        "depth_mm": 0.4507224983961722,
+        "pose_age_ms": 140.00000000004675,
+        "remaining_s": 7.419999999999797,
+        "search_off_progress_next_window_mm": 17.09342693774607
+      },
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 606,
+        "collecting_contact_window": 6
+      }
+    },
+    {
+      "episode": 11,
+      "reset_seed": 20261130,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": -6.938893903907228e-18,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": -6.938893903907228e-18,
+          "completion_time_s": 0.0
+        }
+      },
+      "group": "other",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.582000000000537,
+          "peak_force_n": 15.92109264645208,
+          "final_depth_mm": 50.00494914486575,
+          "trigger_time_s": null,
+          "end_time_s": 11.582000000000537,
+          "disturbance": {
+            "lateral_offset_x": 0.0021722078312248006,
+            "lateral_offset_y": -0.0024805470290249513,
+            "friction_scale": 0.9853949142444851,
+            "tool_mass_scale": 0.8019754514948008
+          }
+        },
+        "search-compensated": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.582000000000537,
+          "peak_force_n": 15.92109264645208,
+          "final_depth_mm": 50.00494914486575,
+          "trigger_time_s": null,
+          "end_time_s": 11.582000000000537,
+          "disturbance": {
+            "lateral_offset_x": 0.0021722078312248006,
+            "lateral_offset_y": -0.0024805470290249513,
+            "friction_scale": 0.9853949142444851,
+            "tool_mass_scale": 0.8019754514948008
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.582000000000537,
+          "peak_force_n": 15.92109264645208,
+          "final_depth_mm": 50.00494914486575,
+          "trigger_time_s": null,
+          "end_time_s": 11.582000000000537,
+          "disturbance": {
+            "lateral_offset_x": 0.0021722078312248006,
+            "lateral_offset_y": -0.0024805470290249513,
+            "friction_scale": 0.9853949142444851,
+            "tool_mass_scale": 0.8019754514948008
+          }
+        }
+      },
+      "old_trigger": null,
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 579,
+        "collecting_contact_window": 2
+      }
+    },
+    {
+      "episode": 12,
+      "reset_seed": 20261131,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "search_harmed_baseline_success",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.842000000000624,
+          "peak_force_n": 73.29853074366441,
+          "final_depth_mm": 50.03846894152797,
+          "trigger_time_s": null,
+          "end_time_s": 11.842000000000624,
+          "disturbance": {
+            "lateral_offset_x": -0.005967160572507932,
+            "lateral_offset_y": 0.002539597152714362,
+            "friction_scale": 1.0720463549586958,
+            "tool_mass_scale": 1.0635522041355938
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 73.29853074366441,
+          "final_depth_mm": 0.011993973475454833,
+          "trigger_time_s": 10.580000000000203,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.005967160572507932,
+            "lateral_offset_y": 0.002539597152714362,
+            "friction_scale": 1.0720463549586958,
+            "tool_mass_scale": 1.0635522041355938
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.842000000000624,
+          "peak_force_n": 73.29853074366441,
+          "final_depth_mm": 50.03846894152797,
+          "trigger_time_s": null,
+          "end_time_s": 11.842000000000624,
+          "disturbance": {
+            "lateral_offset_x": -0.005967160572507932,
+            "lateral_offset_y": 0.002539597152714362,
+            "friction_scale": 1.0720463549586958,
+            "tool_mass_scale": 1.0635522041355938
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.580000000000203,
+        "force_n": 43.10272701424417,
+        "depth_mm": 0.32585129829110215,
+        "pose_age_ms": 140.00000000004675,
+        "remaining_s": 7.419999999999797,
+        "search_off_progress_next_window_mm": 16.282888643269434
+      },
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 585,
+        "collecting_contact_window": 9
+      }
+    },
+    {
+      "episode": 13,
+      "reset_seed": 20261132,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        }
+      },
+      "group": "other",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.876000000000635,
+          "peak_force_n": 51.213622662527904,
+          "final_depth_mm": 51.18895581072452,
+          "trigger_time_s": null,
+          "end_time_s": 11.876000000000635,
+          "disturbance": {
+            "lateral_offset_x": -0.006553016803984101,
+            "lateral_offset_y": 0.005513764620455569,
+            "friction_scale": 0.9314085279945181,
+            "tool_mass_scale": 1.1096071280223352
+          }
+        },
+        "search-compensated": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.876000000000635,
+          "peak_force_n": 51.213622662527904,
+          "final_depth_mm": 51.18895581072452,
+          "trigger_time_s": null,
+          "end_time_s": 11.876000000000635,
+          "disturbance": {
+            "lateral_offset_x": -0.006553016803984101,
+            "lateral_offset_y": 0.005513764620455569,
+            "friction_scale": 0.9314085279945181,
+            "tool_mass_scale": 1.1096071280223352
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.876000000000635,
+          "peak_force_n": 51.213622662527904,
+          "final_depth_mm": 51.18895581072452,
+          "trigger_time_s": null,
+          "end_time_s": 11.876000000000635,
+          "disturbance": {
+            "lateral_offset_x": -0.006553016803984101,
+            "lateral_offset_y": 0.005513764620455569,
+            "friction_scale": 0.9314085279945181,
+            "tool_mass_scale": 1.1096071280223352
+          }
+        }
+      },
+      "old_trigger": null,
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 595
+      }
+    },
+    {
+      "episode": 14,
+      "reset_seed": 20261133,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "both_failed",
+      "outcomes": {
+        "learned": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 66.27916418550775,
+          "final_depth_mm": 0.03609871043375179,
+          "trigger_time_s": null,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": 0.003891849190943832,
+            "lateral_offset_y": 0.004037486391481792,
+            "friction_scale": 1.2224190602922644,
+            "tool_mass_scale": 0.9483898421892227
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 66.27916418550775,
+          "final_depth_mm": 0.03078658642885479,
+          "trigger_time_s": 10.560000000000196,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": 0.003891849190943832,
+            "lateral_offset_y": 0.004037486391481792,
+            "friction_scale": 1.2224190602922644,
+            "tool_mass_scale": 0.9483898421892227
+          }
+        },
+        "search-stall": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 66.27916418550775,
+          "final_depth_mm": 0.04844351760913135,
+          "trigger_time_s": 11.540000000000523,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": 0.003891849190943832,
+            "lateral_offset_y": 0.004037486391481792,
+            "friction_scale": 1.2224190602922644,
+            "tool_mass_scale": 0.9483898421892227
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.560000000000196,
+        "force_n": 66.27916418550775,
+        "depth_mm": 0.027767557937541376,
+        "pose_age_ms": 160.00000000005343,
+        "remaining_s": 7.439999999999804,
+        "search_off_progress_next_window_mm": 0.41322150334294205
+      },
+      "stall_trigger": {
+        "time_s": 11.540000000000523,
+        "force_n": 7.689443882642202,
+        "depth_mm": 0.026197071493316848,
+        "pose_age_ms": 140.00000000004675,
+        "remaining_s": 6.459999999999477,
+        "search_off_progress_next_window_mm": 0.0006219549169017569
+      },
+      "stall_decisions": {
+        "contact_or_depth_gate": 540,
+        "collecting_contact_window": 37,
+        "stall_triggered": 324
+      }
+    },
+    {
+      "episode": 15,
+      "reset_seed": 20261134,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "search_harmed_baseline_success",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.61800000000055,
+          "peak_force_n": 75.68281563138939,
+          "final_depth_mm": 51.834877458592224,
+          "trigger_time_s": null,
+          "end_time_s": 11.61800000000055,
+          "disturbance": {
+            "lateral_offset_x": -0.0037717808020850266,
+            "lateral_offset_y": 0.004333090550207455,
+            "friction_scale": 0.8056596104850673,
+            "tool_mass_scale": 0.8771330767646883
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 75.68281563138939,
+          "final_depth_mm": -0.018742318513176315,
+          "trigger_time_s": 10.60000000000021,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.0037717808020850266,
+            "lateral_offset_y": 0.004333090550207455,
+            "friction_scale": 0.8056596104850673,
+            "tool_mass_scale": 0.8771330767646883
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.61800000000055,
+          "peak_force_n": 75.68281563138939,
+          "final_depth_mm": 51.834877458592224,
+          "trigger_time_s": null,
+          "end_time_s": 11.61800000000055,
+          "disturbance": {
+            "lateral_offset_x": -0.0037717808020850266,
+            "lateral_offset_y": 0.004333090550207455,
+            "friction_scale": 0.8056596104850673,
+            "tool_mass_scale": 0.8771330767646883
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.60000000000021,
+        "force_n": 24.195152104641597,
+        "depth_mm": 0.4324789188828726,
+        "pose_age_ms": 120.00000000004007,
+        "remaining_s": 7.399999999999791,
+        "search_off_progress_next_window_mm": 25.417950128751922
+      },
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 579,
+        "collecting_contact_window": 3
+      }
+    },
+    {
+      "episode": 16,
+      "reset_seed": 20261135,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        }
+      },
+      "group": "other",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.644000000000558,
+          "peak_force_n": 22.751578968029545,
+          "final_depth_mm": 50.04160175131267,
+          "trigger_time_s": null,
+          "end_time_s": 11.644000000000558,
+          "disturbance": {
+            "lateral_offset_x": -0.0018845598097446273,
+            "lateral_offset_y": -0.005271805627743454,
+            "friction_scale": 0.974644551398163,
+            "tool_mass_scale": 1.081026875318818
+          }
+        },
+        "search-compensated": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.644000000000558,
+          "peak_force_n": 22.751578968029545,
+          "final_depth_mm": 50.04160175131267,
+          "trigger_time_s": null,
+          "end_time_s": 11.644000000000558,
+          "disturbance": {
+            "lateral_offset_x": -0.0018845598097446273,
+            "lateral_offset_y": -0.005271805627743454,
+            "friction_scale": 0.974644551398163,
+            "tool_mass_scale": 1.081026875318818
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.644000000000558,
+          "peak_force_n": 22.751578968029545,
+          "final_depth_mm": 50.04160175131267,
+          "trigger_time_s": null,
+          "end_time_s": 11.644000000000558,
+          "disturbance": {
+            "lateral_offset_x": -0.0018845598097446273,
+            "lateral_offset_y": -0.005271805627743454,
+            "friction_scale": 0.974644551398163,
+            "tool_mass_scale": 1.081026875318818
+          }
+        }
+      },
+      "old_trigger": null,
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 584
+      }
+    },
+    {
+      "episode": 17,
+      "reset_seed": 20261136,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0,
+          "completion_time_s": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "search_harmed_baseline_success",
+      "outcomes": {
+        "learned": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.714000000000581,
+          "peak_force_n": 60.20399438151114,
+          "final_depth_mm": 50.03632309754214,
+          "trigger_time_s": null,
+          "end_time_s": 11.714000000000581,
+          "disturbance": {
+            "lateral_offset_x": -0.0053321860597963676,
+            "lateral_offset_y": -0.0015561206134483679,
+            "friction_scale": 1.2346359210758164,
+            "tool_mass_scale": 1.1301710073270046
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 60.20399438151114,
+          "final_depth_mm": 56.321975299035046,
+          "trigger_time_s": 10.54000000000019,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.0053321860597963676,
+            "lateral_offset_y": -0.0015561206134483679,
+            "friction_scale": 1.2346359210758164,
+            "tool_mass_scale": 1.1301710073270046
+          }
+        },
+        "search-stall": {
+          "success": true,
+          "safety_violation": false,
+          "completion_time_s": 11.714000000000581,
+          "peak_force_n": 60.20399438151114,
+          "final_depth_mm": 50.03632309754214,
+          "trigger_time_s": null,
+          "end_time_s": 11.714000000000581,
+          "disturbance": {
+            "lateral_offset_x": -0.0053321860597963676,
+            "lateral_offset_y": -0.0015561206134483679,
+            "friction_scale": 1.2346359210758164,
+            "tool_mass_scale": 1.1301710073270046
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.54000000000019,
+        "force_n": 50.81271729202934,
+        "depth_mm": 0.15141994824563465,
+        "pose_age_ms": 140.00000000004675,
+        "remaining_s": 7.459999999999811,
+        "search_off_progress_next_window_mm": 20.7269900495618
+      },
+      "stall_trigger": null,
+      "stall_decisions": {
+        "contact_or_depth_gate": 586,
+        "collecting_contact_window": 1
+      }
+    },
+    {
+      "episode": 18,
+      "reset_seed": 20261137,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "both_failed",
+      "outcomes": {
+        "learned": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 66.71095551615275,
+          "final_depth_mm": 0.05135262846622801,
+          "trigger_time_s": null,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": 0.005028791892469134,
+            "lateral_offset_y": 0.0004032481728772925,
+            "friction_scale": 0.7450089821017074,
+            "tool_mass_scale": 1.0794542369427509
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 66.71095551615275,
+          "final_depth_mm": 0.019405815695983097,
+          "trigger_time_s": 10.560000000000196,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": 0.005028791892469134,
+            "lateral_offset_y": 0.0004032481728772925,
+            "friction_scale": 0.7450089821017074,
+            "tool_mass_scale": 1.0794542369427509
+          }
+        },
+        "search-stall": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 66.71095551615275,
+          "final_depth_mm": 0.022072520499683,
+          "trigger_time_s": 11.340000000000456,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": 0.005028791892469134,
+            "lateral_offset_y": 0.0004032481728772925,
+            "friction_scale": 0.7450089821017074,
+            "tool_mass_scale": 1.0794542369427509
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.560000000000196,
+        "force_n": 39.70085618191899,
+        "depth_mm": 0.34639672348069084,
+        "pose_age_ms": 120.00000000004007,
+        "remaining_s": 7.439999999999804,
+        "search_off_progress_next_window_mm": 0.08537966204996694
+      },
+      "stall_trigger": {
+        "time_s": 11.340000000000456,
+        "force_n": 8.506110362211121,
+        "depth_mm": 0.0401684846868533,
+        "pose_age_ms": 140.00000000004675,
+        "remaining_s": 6.659999999999544,
+        "search_off_progress_next_window_mm": 0.000734917212974473
+      },
+      "stall_decisions": {
+        "contact_or_depth_gate": 534,
+        "collecting_contact_window": 33,
+        "stall_triggered": 334
+      }
+    },
+    {
+      "episode": 19,
+      "reset_seed": 20261138,
+      "archive_deltas": {
+        "learned": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        },
+        "search-compensated": {
+          "max_contact_force_n": 0.0,
+          "final_insertion_depth_m": 0.0
+        }
+      },
+      "group": "both_failed",
+      "outcomes": {
+        "learned": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 65.6557157815312,
+          "final_depth_mm": 0.02964012804029803,
+          "trigger_time_s": null,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.0065277491019239105,
+            "lateral_offset_y": 0.00404114494677005,
+            "friction_scale": 1.3773698547122513,
+            "tool_mass_scale": 0.9318178339866975
+          }
+        },
+        "search-compensated": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 65.6557157815312,
+          "final_depth_mm": 0.014705424508265619,
+          "trigger_time_s": 10.560000000000196,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.0065277491019239105,
+            "lateral_offset_y": 0.00404114494677005,
+            "friction_scale": 1.3773698547122513,
+            "tool_mass_scale": 0.9318178339866975
+          }
+        },
+        "search-stall": {
+          "success": false,
+          "safety_violation": false,
+          "completion_time_s": null,
+          "peak_force_n": 65.6557157815312,
+          "final_depth_mm": 0.04694909349073351,
+          "trigger_time_s": 11.520000000000516,
+          "end_time_s": 18.000000000000902,
+          "disturbance": {
+            "lateral_offset_x": -0.0065277491019239105,
+            "lateral_offset_y": 0.00404114494677005,
+            "friction_scale": 1.3773698547122513,
+            "tool_mass_scale": 0.9318178339866975
+          }
+        }
+      },
+      "old_trigger": {
+        "time_s": 10.560000000000196,
+        "force_n": 65.6557157815312,
+        "depth_mm": 0.021224349192050518,
+        "pose_age_ms": 160.00000000005343,
+        "remaining_s": 7.439999999999804,
+        "search_off_progress_next_window_mm": 0.33920959737726575
+      },
+      "stall_trigger": {
+        "time_s": 11.520000000000516,
+        "force_n": 7.941892179140028,
+        "depth_mm": 0.0274378880762427,
+        "pose_age_ms": 120.00000000004007,
+        "remaining_s": 6.4799999999994835,
+        "search_off_progress_next_window_mm": 0.0016758753429435558
+      },
+      "stall_decisions": {
+        "contact_or_depth_gate": 537,
+        "collecting_contact_window": 38,
+        "stale_pose": 1,
+        "stall_triggered": 325
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Literal
 
 import numpy as np
@@ -12,6 +13,18 @@ from panda_assembly.pose_estimation import PoseEstimate
 FloatArray = NDArray[np.float64]
 Policy = Callable[[NDArray[np.float32]], NDArray[np.float32]]
 EntryMode = Literal["legacy", "depth", "compensated"]
+
+
+@dataclass(frozen=True)
+class StallTriggerConfig:
+    contact_duration_s: float
+    minimum_progress_m: float
+    retry_margin_s: float = 0.5
+
+    def __post_init__(self) -> None:
+        values = (self.contact_duration_s, self.minimum_progress_m, self.retry_margin_s)
+        if not all(np.isfinite(value) and value > 0.0 for value in values):
+            raise ValueError("stall-trigger settings must be positive and finite")
 
 
 class SpiralResidualPolicy:
@@ -36,6 +49,7 @@ class SpiralResidualPolicy:
         entry_depth_m: float = 0.003,
         entry_mode: EntryMode = "legacy",
         max_pose_age_s: float = 0.16,
+        stall_trigger: StallTriggerConfig | None = None,
     ) -> None:
         self.base_policy = base_policy
         self.max_position_offset_m = np.asarray(max_position_offset_m, dtype=float)
@@ -68,6 +82,9 @@ class SpiralResidualPolicy:
             raise ValueError(f"unknown entry mode: {entry_mode}")
         self.entry_mode = entry_mode
         self.max_pose_age_s = max_pose_age_s
+        if stall_trigger is not None and entry_mode != "compensated":
+            raise ValueError("stall recovery requires timestamped pose and tip kinematics")
+        self.stall_trigger = stall_trigger
         self.reset_episode()
 
     def reset_episode(self) -> None:
@@ -77,6 +94,9 @@ class SpiralResidualPolicy:
         self._center_action = np.zeros(3, dtype=np.float32)
         self._last_action = np.zeros(3, dtype=np.float32)
         self._tip_z_history: deque[tuple[float, float]] = deque()
+        self._stall_start_s: float | None = None
+        self._stall_tip_z_m = 0.0
+        self.trigger_decision = "inactive"
 
     def episode_metrics(self) -> dict[str, bool]:
         return {
@@ -111,13 +131,46 @@ class SpiralResidualPolicy:
                     # The fixture is stationary. Only the robot tip moved since capture.
                     depth_m = float(pose.relative_position_m[2]) + sample_z_m - tip_z_m
                     break
-        return self._action(observation, compensated_depth_m=depth_m)
+        return self._action(observation, compensated_depth_m=depth_m, tip_z_m=tip_z_m)
+
+    def _stall_ready(
+        self,
+        time_s: float,
+        force_n: float,
+        tip_z_m: float,
+        depth_m: float | None,
+    ) -> bool:
+        config = self.stall_trigger
+        assert config is not None
+        if force_n < self.trigger_force_n or (
+            depth_m is not None and depth_m >= self.entry_depth_m
+        ):
+            self._stall_start_s = None
+            self.trigger_decision = "contact_or_depth_gate"
+            return False
+        if (
+            self._stall_start_s is None
+            or self._stall_tip_z_m - tip_z_m >= config.minimum_progress_m
+        ):
+            self._stall_start_s = time_s
+            self._stall_tip_z_m = tip_z_m
+        required_s = self.retract_duration_s + self.search_duration_s + config.retry_margin_s
+        if self.episode_duration_s - time_s < required_s - 1e-6:
+            self.trigger_decision = "insufficient_time"
+        elif time_s - self._stall_start_s < config.contact_duration_s - 1e-6:
+            self.trigger_decision = "collecting_contact_window"
+        elif depth_m is None:
+            self.trigger_decision = "stale_pose"
+        else:
+            self.trigger_decision = "stall_triggered"
+        return self.trigger_decision == "stall_triggered"
 
     def _action(
         self,
         observation: NDArray[np.float32],
         *,
         compensated_depth_m: float | None = None,
+        tip_z_m: float | None = None,
     ) -> NDArray[np.float32]:
         observation = np.asarray(observation, dtype=np.float32)
         if observation.shape != (12,):
@@ -133,7 +186,11 @@ class SpiralResidualPolicy:
         legacy = self.entry_mode == "legacy"
         can_trigger = legacy or (depth_m is not None and depth_m < self.entry_depth_m)
 
-        if not self._search_triggered and can_trigger and force_n >= self.trigger_force_n:
+        should_trigger = can_trigger and force_n >= self.trigger_force_n
+        if not self._search_triggered and self.stall_trigger is not None:
+            assert tip_z_m is not None
+            should_trigger = self._stall_ready(time_s, force_n, tip_z_m, depth_m)
+        if not self._search_triggered and should_trigger:
             self._search_triggered = True
             self._trigger_time_s = time_s
             self._center_action = base_action.copy()
