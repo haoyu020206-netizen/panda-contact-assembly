@@ -262,7 +262,49 @@ The 3 mm Menagerie task was repeated across three independently trained source s
 | 1.5 mm correlated error | 38/60, **63.3%** | 39/60, **65.0%** | 6 | 49.9 ms | 0.0% | 70.6 N |
 | Latency + dropout + error | 43/60, **71.7%** | 27/60, **45.0%** | 3 | 145.9 ms | 29.1% | 62.3 N |
 
-The learned policy lost only 3.3 percentage points from ideal to nominal sensing and retained 71.7% success in the combined condition. The recovery wrapper is the important negative result: under 120 ms latency it rescued zero trials and harmed 14 otherwise successful trials; under the combined condition it rescued zero and harmed 16. Its entry detector uses stale hole-relative Z, so search must become freshness-aware before it can be called robust. Correlated error was the hardest learned-policy condition and produced six safety terminations. These are fixed three-seed simulation results, not confidence intervals, hardware force predictions, or evidence of real visual pose estimation. Formal evidence comes from [GitHub Actions run 45056792299](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/45056792299), is committed under `docs/results/pose-estimator-transfer/`, and is checked from every per-episode CSV by an executable validator.
+The learned policy lost 3.3 percentage points from ideal to nominal sensing and retained 71.7% success in the combined condition. The legacy recovery wrapper rescued zero trials at 120 ms latency and turned 14 otherwise successful trials into failures. In the combined condition it rescued zero and harmed 16. The follow-up below tests the entry rule and timestamp compensation. Correlated error was the hardest condition for the learned policy and produced six safety terminations. The simulation used three fixed training seeds and a simulator-derived sensing model. The validator checks the committed per-episode CSVs against [the formal benchmark results](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/45056792299).
+
+### Pose-aware spiral recovery
+
+The legacy wrapper treated negative hole-relative Z as entry, although the environment defines
+insertion depth as the hole-opening height minus the tip height. A tip above the socket could
+therefore latch the entry state. The corrected wrapper checks positive insertion depth after the
+unload phase and avoids initiating recovery when the depth already reaches the entry threshold.
+
+The compensated variant also combines the timestamped relative depth with the tip's vertical
+displacement since the measurement was captured. This uses robot kinematics and assumes a
+stationary socket during each episode. It defers a new recovery trigger and entry detection
+when the measurement is older than 160 ms or the matching tip sample is missing. An ongoing
+spiral follows its existing motion schedule while entry detection is deferred.
+
+To evaluate all four variants on a downloaded source checkpoint, run:
+
+```powershell
+python scripts/evaluate_pose_estimator_transfer.py --model path/to/residual_sac.zip --seed 20261119 --episodes 20 --compare-recovery --output runs/recovery/20261119
+```
+
+The **Pose-Aware Recovery** workflow repeats this evaluation for the three source checkpoints
+and pairs episode outcomes using the sampled fixture offset, friction, and mass. Each episode
+uses the checkpoint seed plus its episode index. Since the checkpoint seeds are consecutive,
+the 60 entries per condition and variant include 22 distinct disturbance vectors.
+
+| Sensing condition | No search | Legacy search | Corrected entry | Corrected entry + compensation |
+| --- | ---: | ---: | ---: | ---: |
+| Ideal pose | 47/60 | 56/60 | 50/60 | 50/60 |
+| 25 Hz nominal | 45/60 | 46/60 | 41/60 | 41/60 |
+| 120 ms latency | 44/60 | 30/60 | 28/60 | 31/60 |
+| 30% dropout | 42/60 | 39/60 | 36/60 | 37/60 |
+| 1.5 mm correlated error | 38/60 | 39/60 | 31/60 | 31/60 |
+| Combined disturbance | 43/60 | 27/60 | 25/60 | 31/60 |
+
+Compensation rescued 3 of 60 trials at 120 ms latency and 6 of 60 in the combined
+condition relative to corrected entry alone, with zero paired harms in either comparison.
+Turning search off still produced more successes in every simulated camera condition.
+All four variants had three safety terminations each in the latency and combined conditions.
+In the combined condition, mean peak force was 62.0 N with compensation and 62.3 N
+with search off. The compensated wrapper remains opt-in for this benchmark.
+[Machine-readable results](docs/results/pose-aware-recovery/recovery-comparison.json)
+and [cloud run with episode records](https://github.com/haoyu020206-netizen/panda-contact-assembly/actions/runs/45476321699).
 
 ## 已实现
 
@@ -453,7 +495,7 @@ tests/                            # 配置、数学、轨迹与模型测试
 
 ## 后续升级顺序
 
-1. 让螺旋恢复读取估计器新鲜度：陈旧帧时暂停入口判定，或加入短时状态预测；
+1. 比较基于持续接触力和插入进度停滞的触发条件，验证能否减少搜索对正常插入的干预；
 2. 用渲染的标记点/相机图像替代 simulator-derived measurement source，并标定相机外参；
 3. 加入 Menagerie 域随机化和少量目标域微调，并和零样本迁移做严格消融；
 4. 扩大训练种子后报告置信区间，并把感知误差和控制失效做分层分析；

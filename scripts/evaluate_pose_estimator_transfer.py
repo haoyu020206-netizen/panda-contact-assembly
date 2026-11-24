@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -8,9 +9,11 @@ from pathlib import Path
 import numpy as np
 
 from panda_assembly.config import load_config
-from panda_assembly.contact_search import SpiralResidualPolicy
+from panda_assembly.contact_search import EntryMode, SpiralResidualPolicy
 from panda_assembly.pose_estimation import PoseEstimatorConfig
 from panda_assembly.residual_rl import evaluate_residual_policy, save_episode_results
+
+MAX_RECOVERY_POSE_AGE_S = 0.16
 
 CONDITIONS = (
     (
@@ -93,6 +96,7 @@ def main() -> None:
     parser.add_argument("--search-radius-m", type=float, default=0.007)
     parser.add_argument("--episode-duration-s", type=float, default=18.0)
     parser.add_argument("--insert-time-s", type=float, default=12.0)
+    parser.add_argument("--compare-recovery", action="store_true")
     args = parser.parse_args()
     if args.episodes <= 0:
         raise SystemExit("episodes must be positive")
@@ -126,7 +130,7 @@ def main() -> None:
         action, _ = model.predict(observation, deterministic=True)
         return np.asarray(action, dtype=np.float32)
 
-    def search_policy() -> SpiralResidualPolicy:
+    def search_policy(entry_mode: EntryMode = "legacy") -> SpiralResidualPolicy:
         return SpiralResidualPolicy(
             learned_policy,
             max_position_offset_m=np.asarray(config.residual_rl.max_position_offset_m),
@@ -135,16 +139,26 @@ def main() -> None:
             trigger_force_n=args.search_trigger_force_n,
             search_radius_m=args.search_radius_m,
             entry_depth_m=config.contact_recovery.entry_depth_m,
+            entry_mode=entry_mode,
+            max_pose_age_s=MAX_RECOVERY_POSE_AGE_S,
         )
 
     args.output.mkdir(parents=True, exist_ok=True)
     condition_summaries: dict[str, dict] = {}
     for condition_key, label, estimator_config in CONDITIONS:
         policy_summaries: dict[str, dict] = {}
-        for policy_key, policy in (
+        policies = [
             ("learned", learned_policy),
             ("learned-search", search_policy()),
-        ):
+        ]
+        if args.compare_recovery:
+            policies.extend(
+                [
+                    ("search-depth", search_policy("depth")),
+                    ("search-compensated", search_policy("compensated")),
+                ]
+            )
+        for policy_key, policy in policies:
             policy_output = args.output / condition_key / policy_key
             results = evaluate_residual_policy(
                 config,
@@ -179,11 +193,14 @@ def main() -> None:
             "trigger_force_n": args.search_trigger_force_n,
             "radius_m": args.search_radius_m,
             "entry_depth_m": config.contact_recovery.entry_depth_m,
+            **({"max_pose_age_s": MAX_RECOVERY_POSE_AGE_S} if args.compare_recovery else {}),
         },
         "insert_time_s": args.insert_time_s,
         "episode_duration_s": args.episode_duration_s,
         "conditions": condition_summaries,
     }
+    if args.compare_recovery:
+        summary["model_sha256"] = hashlib.sha256(args.model.read_bytes()).hexdigest()
     with (args.output / "pose_estimator_summary.json").open("w", encoding="utf-8") as handle:
         json.dump(summary, handle, indent=2)
     print(json.dumps({"seed": seed, "conditions": list(condition_summaries)}, indent=2))
