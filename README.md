@@ -13,7 +13,7 @@ GitHub Actions 会在标准 Linux runner 上执行 lint、单元测试、轻量�
 
 ## Verified results
 
-[Watch the 62-second paired insertion demo](docs/results/paired-recovery-demo/paired-recovery.mp4) or [read the case notes](docs/results/paired-recovery-demo/README.md). The same disturbance succeeds with spiral search off and times out with compensated search enabled.
+[Watch the 54-second paired insertion demo](docs/results/paired-recovery-demo/presentation/paired-recovery-presentation.mp4) or [read the case notes](docs/results/paired-recovery-demo/README.md). The same disturbance succeeds with spiral search off and times out with compensated search enabled.
 
 ![Verified peg-in-hole insertion trajectory](docs/results/insertion.gif)
 

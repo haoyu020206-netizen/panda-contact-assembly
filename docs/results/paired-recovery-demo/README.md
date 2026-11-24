@@ -1,5 +1,14 @@
 # Paired Panda recovery replay
 
+[54-second presentation cut](presentation/paired-recovery-presentation.mp4) ·
+[Timed Chinese and English speaker notes](presentation/speaker-notes.md) ·
+[Presentation cover](presentation/presentation-cover.png)
+
+The presentation cut uses the verified replay and CSV traces. With FFmpeg on the path
+and the project plotting dependencies installed, run
+`python scripts/edit_paired_recovery_presentation.py --output runs/presentation`
+from the repository root.
+
 This 62-second MuJoCo replay compares the same SAC checkpoint and the same disturbance with
 search off (left) and compensated search enabled (right). It shows one counterexample from the
 [four-policy recovery benchmark](../pose-aware-recovery/recovery-comparison.json).
