@@ -118,7 +118,9 @@ def record(
     return Replay(rows, np.asarray(states), summary)
 
 
-def verify(replay: Replay, path: Path, *, episode: int = EPISODE) -> None:
+def verify(
+    replay: Replay, path: Path, *, episode: int = EPISODE, strict_metrics: bool = True
+) -> dict[str, float]:
     with path.open(newline="", encoding="utf-8") as handle:
         archived = next(row for row in csv.DictReader(handle) if int(row["episode"]) == episode)
     result = replay.summary
@@ -129,19 +131,23 @@ def verify(replay: Replay, path: Path, *, episode: int = EPISODE) -> None:
     }
     for key, value in flags.items():
         if (archived[key] == "True") != value:
-            raise ValueError(f"{path}: replay differs on {key}")
-    numeric = {
-        **result["disturbance"],
+            raise ValueError(f"{path} episode {episode}: replay differs on {key}")
+    for key, value in result["disturbance"].items():
+        if not math.isclose(float(archived[key]), value, rel_tol=1e-12, abs_tol=1e-12):
+            raise ValueError(f"{path} episode {episode}: replay disturbance differs on {key}")
+    metrics = {
         "max_contact_force_n": result["peak_force_n"],
         "final_insertion_depth_m": result["final_depth_mm"] / 1000.0,
     }
-    for key, value in numeric.items():
-        if not math.isclose(float(archived[key]), value, rel_tol=1e-5, abs_tol=1e-6):
-            raise ValueError(f"{path}: replay differs on {key}")
-    if result["success"] and not math.isclose(
-        float(archived["completion_time_s"]), result["completion_time_s"], abs_tol=0.0021
-    ):
-        raise ValueError(f"{path}: replay completion time differs")
+    if result["success"]:
+        metrics["completion_time_s"] = result["completion_time_s"]
+    for key, value in metrics.items():
+        tolerance = 0.0021 if key == "completion_time_s" else 1e-6
+        if strict_metrics and not math.isclose(
+            float(archived[key]), value, rel_tol=1e-5, abs_tol=tolerance
+        ):
+            raise ValueError(f"{path} episode {episode}: replay differs on {key}")
+    return {key: value - float(archived[key]) for key, value in metrics.items()}
 
 
 @lru_cache(maxsize=24)

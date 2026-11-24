@@ -95,8 +95,15 @@ def run(model_path: Path, reference: Path, output: Path) -> dict:
                 record(env, learned, search, reset_seed=SEED + episode, trigger_diagnostics=True)
                 for search in (None, *searches)
             ]
-            for index in range(2):
-                verify(replay[index], reference / POLICIES[index] / "episodes.csv", episode=episode)
+            archive_deltas = {
+                policy: verify(
+                    trace,
+                    reference / policy / "episodes.csv",
+                    episode=episode,
+                    strict_metrics=False,
+                )
+                for policy, trace in zip(POLICIES[:2], replay[:2], strict=True)
+            }
             off, old, candidate = replay
             if off.summary["success"] and not old.summary["success"]:
                 group = "search_harmed_baseline_success"
@@ -115,6 +122,7 @@ def run(model_path: Path, reference: Path, output: Path) -> dict:
                 {
                     "episode": episode,
                     "reset_seed": SEED + episode,
+                    "archive_deltas": archive_deltas,
                     "group": group,
                     "outcomes": {
                         key: trace.summary for key, trace in zip(POLICIES, replay, strict=True)
