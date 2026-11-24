@@ -52,8 +52,17 @@ class Replay:
         return np.asarray([row["time_s"] for row in self.rows])
 
 
-def record(env: ResidualPegInsertionEnv, learned, search: SpiralResidualPolicy | None) -> Replay:
-    observation, info = env.reset(seed=SEED + EPISODE)
+def record(
+    env: ResidualPegInsertionEnv,
+    learned,
+    search: SpiralResidualPolicy | None,
+    *,
+    reset_seed: int = SEED + EPISODE,
+    trigger_diagnostics: bool = False,
+) -> Replay:
+    observation, info = env.reset(seed=reset_seed)
+    if search is not None:
+        search.reset_episode()
     rows: list[dict] = []
     states = []
     trigger_s = None
@@ -83,6 +92,12 @@ def record(env: ResidualPegInsertionEnv, learned, search: SpiralResidualPolicy |
                 "search_triggered": trigger_s is not None,
             }
         )
+        if trigger_diagnostics:
+            rows[-1].update(
+                tip_z_mm=1000.0 * env.last_observed_tip_z_m,
+                remaining_s=max(0.0, env.rl.episode_duration_s - time_s),
+                trigger_decision=search.trigger_decision if search is not None else "off",
+            )
         if finished:
             break
         observation, _, terminated, truncated, info = env.step(np.asarray(action, dtype=np.float32))
@@ -103,9 +118,9 @@ def record(env: ResidualPegInsertionEnv, learned, search: SpiralResidualPolicy |
     return Replay(rows, np.asarray(states), summary)
 
 
-def verify(replay: Replay, path: Path) -> None:
+def verify(replay: Replay, path: Path, *, episode: int = EPISODE) -> None:
     with path.open(newline="", encoding="utf-8") as handle:
-        archived = next(row for row in csv.DictReader(handle) if int(row["episode"]) == EPISODE)
+        archived = next(row for row in csv.DictReader(handle) if int(row["episode"]) == episode)
     result = replay.summary
     flags = {
         "success": result["success"],
