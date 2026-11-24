@@ -22,7 +22,7 @@
 
 **0:43–0:54 · 从单例回到实验**
 
-组合扰动下，关闭搜索成功四十三次，补偿搜索成功三十一次，各跑六十回合。下一步我会验证能否用推进停滞来触发搜索。
+各跑六十回合，关闭搜索成功四十三次，补偿搜索三十一次。下一步验证推进停滞时再触发。
 
 ## English talk track
 
@@ -44,7 +44,7 @@ The right run times out at 18 seconds. Both trials recorded a 58-newton peak at 
 
 **0:43–0:54 · Connect the case to the benchmark**
 
-Under the combined disturbance, search off succeeded in 43 of 60 trials, versus 31 with compensation. Next I would test a trigger based on sustained contact and stalled insertion.
+In 60 trials per policy, search off succeeded 43 times and compensated search 31. Next, I’d test triggering only after insertion stalls.
 
 ## 观众追问时
 
