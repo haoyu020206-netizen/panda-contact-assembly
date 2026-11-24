@@ -1,0 +1,32 @@
+{
+  "development_commit": "dcee9cd793777615ee9bc02cf23e044d4f7a39fd",
+  "checkpoint_run": 45056792299,
+  "condition_order": ["oracle", "camera-latency", "camera-combined"],
+  "primary_condition": "camera-combined",
+  "episodes_per_checkpoint": 20,
+  "reset_seed_start": {
+    "20261119": 7300100,
+    "20261120": 7300200,
+    "20261121": 7300300
+  },
+  "socket_clearance_m": 0.003,
+  "insert_time_s": 12.0,
+  "episode_duration_s": 18.0,
+  "candidate": {
+    "trigger_force_n": 5.0,
+    "contact_duration_s": 0.6,
+    "minimum_progress_m": 0.001,
+    "entry_depth_m": 0.004,
+    "max_pose_age_s": 0.16,
+    "retract_duration_s": 0.5,
+    "search_duration_s": 4.0,
+    "retry_margin_s": 0.5,
+    "search_radius_m": 0.007,
+    "search_cycles": 3.0
+  },
+  "acceptance": {
+    "minimum_primary_net_rescues": 1,
+    "minimum_net_rescues_in_other_conditions": 0,
+    "maximum_new_safety_terminations": 0
+  }
+}
