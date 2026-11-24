@@ -1,0 +1,38 @@
+{
+  "condition": "camera-combined",
+  "checkpoint_seed": 20261119,
+  "checkpoint_sha256": "c82dfc9cef31b52fb8219e57cb87df156653f2db5a2f5558e2889f7f3efacccd",
+  "episode": 8,
+  "reset_seed": 20261127,
+  "benchmark_run": 45476321699,
+  "search_off": {
+    "success": true,
+    "safety_violation": false,
+    "completion_time_s": 11.89200000000064,
+    "peak_force_n": 57.99018612097183,
+    "final_depth_mm": 57.77035590144652,
+    "trigger_time_s": null,
+    "end_time_s": 11.89200000000064,
+    "disturbance": {
+      "lateral_offset_x": -0.001831852587150012,
+      "lateral_offset_y": -0.004758387243263159,
+      "friction_scale": 0.9885746582964061,
+      "tool_mass_scale": 0.9285249734143484
+    }
+  },
+  "compensated_search": {
+    "success": false,
+    "safety_violation": false,
+    "completion_time_s": null,
+    "peak_force_n": 57.99018612097183,
+    "final_depth_mm": 0.05752003024550589,
+    "trigger_time_s": 10.560000000000196,
+    "end_time_s": 18.000000000000902,
+    "disturbance": {
+      "lateral_offset_x": -0.001831852587150012,
+      "lateral_offset_y": -0.004758387243263159,
+      "friction_scale": 0.9885746582964061,
+      "tool_mass_scale": 0.9285249734143484
+    }
+  }
+}
